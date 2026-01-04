@@ -33,3 +33,11 @@ class Decision(SQLModel, table=True):
 class User(SQLModel, table=True):
     username: str = Field(primary_key=True)
     role: str = "reviewer" # reviewer, senior, admin
+
+class Classification(SQLModel, table=True):
+    code: str = Field(primary_key=True)
+    title: str
+    intro: Optional[str] = None
+    includes: Optional[str] = None
+    also_includes: Optional[str] = None
+    excludes: Optional[str] = None

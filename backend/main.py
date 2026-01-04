@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import create_db_and_tables, get_session
-from services import load_initial_data
+from services import load_initial_data, load_coicop_data
 from api import router
 from contextlib import asynccontextmanager
 
@@ -12,6 +12,7 @@ async def lifespan(app: FastAPI):
     from sqlmodel import Session
     from database import engine
     with Session(engine) as session:
+        load_coicop_data(session)
         load_initial_data(session)
     print("Startup complete")
     yield

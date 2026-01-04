@@ -1,5 +1,4 @@
 import { Check, Edit2, AlertTriangle } from 'lucide-react';
-import { clsx } from 'clsx';
 
 interface ActionPanelProps {
     onAction: (action: 'accept' | 'fix' | 'escalate') => void;

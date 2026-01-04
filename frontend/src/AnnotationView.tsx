@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchNextItem, submitDecision } from './api';
-import type { Item, Decision } from './api';
+import { fetchNextItem, submitDecision, fetchClassification } from './api';
+import type { Item, Decision, Classification } from './api';
 import { ItemDisplay } from './components/ItemDisplay';
 import { ActionPanel } from './components/ActionPanel';
 import { FixPanel } from './components/FixPanel';
@@ -12,6 +12,7 @@ export function AnnotationView() {
     const [userId] = useState("test_user_1"); // TODO: Real user auth
     const [processing, setProcessing] = useState(false);
     const [isFixPanelOpen, setIsFixPanelOpen] = useState(false);
+    const [classifications, setClassifications] = useState<Record<string, Classification | null>>({});
 
     const loadNext = useCallback(async () => {
         setLoading(true);
@@ -83,6 +84,32 @@ export function AnnotationView() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [currentItem, processing, isFixPanelOpen]);
 
+    useEffect(() => {
+        if (!currentItem) return;
+        const codes = [currentItem.existing_code, currentItem.model_code].filter(Boolean) as string[];
+
+        const prefixes = new Set<string>();
+        codes.forEach((code) => {
+            const parts = code.split('.');
+            let current = parts[0];
+            prefixes.add(current);
+            for (let i = 1; i < parts.length; i += 1) {
+                current = `${current}.${parts[i]}`;
+                prefixes.add(current);
+            }
+        });
+
+        prefixes.forEach((code) => {
+            if (classifications[code] !== undefined) return;
+            fetchClassification(code)
+                .then((data) => setClassifications((prev) => ({ ...prev, [code]: data })))
+                .catch((err) => {
+                    console.error("Failed to fetch classification", err);
+                    setClassifications((prev) => ({ ...prev, [code]: null }));
+                });
+        });
+    }, [currentItem, classifications]);
+
     if (loading && !currentItem) {
         return (
             <div className="flex h-screen items-center justify-center text-slate-400">
@@ -118,7 +145,12 @@ export function AnnotationView() {
                     </div>
                 )}
 
-                <ItemDisplay item={currentItem} />
+                <ItemDisplay
+                    item={currentItem}
+                    classificationMap={classifications}
+                    existingClassification={currentItem.existing_code ? classifications[currentItem.existing_code] : null}
+                    modelClassification={currentItem.model_code ? classifications[currentItem.model_code] : null}
+                />
 
                 <ActionPanel onAction={handleAction} disabled={processing} />
 
