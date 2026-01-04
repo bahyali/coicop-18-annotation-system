@@ -237,7 +237,7 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
                                             }}
                                             disabled={!isClass}
                                             className={clsx(
-                                                "w-full text-left px-4 py-3 rounded-lg border flex items-start justify-between group transition-all gap-3",
+                                                "w-full text-left px-4 py-3 rounded-lg border flex items-start justify-between group transition-all gap-3 overflow-hidden",
                                                 !isClass
                                                     ? "bg-slate-50 border-slate-200 cursor-not-allowed opacity-75"
                                                     : index === selectedIndex
@@ -245,16 +245,16 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
                                                         : "bg-white border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/40"
                                             )}
                                         >
-                                            <div className="flex-1 space-y-1.5">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex-1 min-w-0 space-y-1.5">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className={clsx(
-                                                        "font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-sm border",
+                                                        "font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-sm border flex-shrink-0",
                                                         index === selectedIndex && isClass ? "border-indigo-200" : "border-slate-200"
                                                     )}>
                                                         {item.code}
                                                     </span>
                                                     <span className={clsx(
-                                                        "text-xs px-2 py-0.5 rounded-full border",
+                                                        "text-xs px-2 py-0.5 rounded-full border flex-shrink-0",
                                                         !isClass
                                                             ? "bg-slate-100 text-slate-500 border-slate-200"
                                                             : index === selectedIndex
@@ -264,46 +264,38 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
                                                         {level}
                                                     </span>
                                                     {!isClass && (
-                                                        <span className="text-[10px] uppercase tracking-wide text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded">
+                                                        <span className="text-[10px] uppercase tracking-wide text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded flex-shrink-0">
                                                             Informational
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className={clsx("text-base font-semibold leading-tight", index === selectedIndex ? "text-indigo-800" : "text-slate-800")}>
+                                                <div className={clsx("text-base font-semibold leading-snug", index === selectedIndex ? "text-indigo-800" : "text-slate-800")}>
                                                     {item.title}
                                                 </div>
                                                 {hierarchy.length > 1 && (
-                                                    <div className="flex flex-wrap gap-2 text-[11px] text-slate-600">
-                                                        {hierarchy.map((level) => (
-                                                            <span key={level.code} className="px-2 py-0.5 rounded border border-slate-200 bg-white flex items-center gap-1">
-                                                                <span className="font-semibold text-slate-700">{level.label}:</span>
-                                                                <span className="font-mono text-slate-900">{level.code}</span>
-                                                                {level.classification?.title && (
-                                                                    <span className="text-slate-600">• {level.classification.title}</span>
+                                                    <div className="flex flex-wrap gap-1.5 text-[11px] text-slate-600">
+                                                        {hierarchy.map((lvl) => (
+                                                            <span key={lvl.code} className="px-2 py-0.5 rounded border border-slate-200 bg-white inline-flex items-start gap-1">
+                                                                <span className="font-semibold text-slate-700 flex-shrink-0">{lvl.label}:</span>
+                                                                <span className="font-mono text-slate-900 flex-shrink-0">{lvl.code}</span>
+                                                                {lvl.classification?.title && (
+                                                                    <span className="text-slate-600">• {lvl.classification.title}</span>
                                                                 )}
                                                             </span>
                                                         ))}
                                                     </div>
                                                 )}
                                                 {item.intro && (
-                                                    <div
-                                                        className="text-xs text-slate-600"
-                                                        style={{
-                                                            display: "-webkit-box",
-                                                            WebkitLineClamp: 3,
-                                                            WebkitBoxOrient: "vertical",
-                                                            overflow: "hidden"
-                                                        }}
-                                                    >
+                                                    <p className="text-xs text-slate-600 leading-relaxed">
                                                         {item.intro}
-                                                    </div>
+                                                    </p>
                                                 )}
                                                 {parseLines(item.includes).length > 0 && (
                                                     <div className="flex items-start gap-2 text-xs text-slate-600">
-                                                        <BookOpen size={14} className="mt-0.5 text-indigo-500" />
+                                                        <BookOpen size={14} className="mt-0.5 text-indigo-500 flex-shrink-0" />
                                                         <div className="space-y-0.5">
                                                             {parseLines(item.includes).map(line => (
-                                                                <div key={line} className="truncate">• {line}</div>
+                                                                <div key={line}>• {line}</div>
                                                             ))}
                                                         </div>
                                                     </div>

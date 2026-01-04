@@ -156,7 +156,8 @@ def search_classifications(session: Session, query: str = "", limit: int = 10) -
         statement = statement.where(
             or_(
                 func.lower(Classification.code).like(lowered),
-                func.lower(Classification.title).like(lowered)
+                func.lower(Classification.title).like(lowered),
+                func.lower(Classification.intro).like(lowered),
             )
         )
     statement = statement.order_by(Classification.code).limit(limit)
