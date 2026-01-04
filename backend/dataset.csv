@@ -1,0 +1,6 @@
+id,description,code,model_code,confidence
+1,"Fresh Milk 1L",01.1.4,01.1.4,0.98
+2,"Gasoline 95",07.2.2,07.2.2,0.95
+3,"Toyota Camry 2023",07.1.1,07.1.1,0.92
+4,"Unlabeled obscure item",05.1.1,05.1.2,0.45
+5,"Rice generic",01.1.1,01.1.1,0.85
