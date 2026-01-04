@@ -92,79 +92,86 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
             </div>
 
             {codesMatch ? (
-                <div className="p-5 bg-blue-50 rounded-lg border border-blue-100 relative overflow-hidden">
+                <div className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border-2 border-green-200 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-3 opacity-10">
                         <BadgeCheck size={90} />
                     </div>
-                    <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-3">
-                        Model & Existing Match
+                    {/* Primary: Match confirmation + Code */}
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500 text-white text-sm font-bold rounded-full shadow-sm">
+                            <BadgeCheck size={16} />
+                            Match Confirmed
+                        </span>
+                        <span className="font-mono text-2xl font-bold text-slate-800">{item.model_code}</span>
                     </div>
-                    <div className="text-2xl font-bold text-slate-900">
+                    {/* Secondary: Classification title - the main info */}
+                    <h2 className="text-3xl font-extrabold text-slate-900 leading-tight">
                         {sharedClassification?.title || modelLabel}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-slate-800 mt-2">
-                        <span className="font-mono text-xl">{item.model_code}</span>
-                        <span className="text-sm px-2 py-1 bg-green-100 text-green-700 rounded-full">Matched</span>
-                        {sharedHierarchy.find(h => h.label === "Class") && (
-                            <span className="text-sm px-2 py-1 rounded bg-white/70 border border-blue-100 flex items-center gap-1">
-                                <span className="font-semibold text-slate-700">Class:</span>
-                                <span className="font-mono text-slate-900">
-                                    {sharedHierarchy.find(h => h.label === "Class")?.code}
-                                </span>
-                                {sharedHierarchy.find(h => h.label === "Class")?.classification?.title && (
-                                    <span className="text-slate-600">
-                                        • {sharedHierarchy.find(h => h.label === "Class")?.classification?.title}
-                                    </span>
-                                )}
-                            </span>
-                        )}
-                    </div>
-                    {sharedHierarchy.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {sharedHierarchy.map((level) => (
-                                <div key={level.code} className="px-2 py-1 rounded bg-white/70 border border-blue-100 text-xs flex items-center gap-1">
-                                    <span className="font-semibold text-slate-700">{level.label}:</span>
-                                    <span className="font-mono text-slate-900">{level.code}</span>
-                                    {level.classification?.title && (
-                                        <span className="text-slate-600">• {level.classification.title}</span>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    </h2>
+                    {/* Tertiary: Brief description if available */}
                     {sharedClassification?.intro && (
-                        <p className="text-sm text-slate-700 mt-3 leading-relaxed">
+                        <p className="text-base text-slate-600 mt-2 leading-relaxed line-clamp-2">
                             {sharedClassification.intro}
                         </p>
                     )}
-                    {hasSharedDetails && (
-                        <div className="mt-3">
+                    {/* Collapsed details */}
+                    {(sharedHierarchy.length > 0 || hasSharedDetails) && (
+                        <div className="mt-4 pt-3 border-t border-green-200/50">
                             <button
                                 onClick={() => setShowSharedDetails(v => !v)}
-                                className="text-xs font-semibold text-blue-700 hover:text-blue-800"
+                                className="text-sm font-medium text-green-700 hover:text-green-800 flex items-center gap-1"
                             >
                                 {showSharedDetails ? "Hide details" : "Show more"}
+                                <span className="text-xs">({sharedHierarchy.length} levels)</span>
                             </button>
                             {showSharedDetails && (
-                                <div className="mt-3 grid grid-cols-2 gap-3">
-                                    {sharedIncludes.length > 0 && (
-                                        <div>
-                                            <div className="text-xs font-semibold text-emerald-700 mb-1">Includes</div>
-                                            <ul className="text-xs text-slate-700 list-disc list-inside space-y-1">
-                                                {sharedIncludes.slice(0, 4).map((line) => (
-                                                    <li key={line}>{line}</li>
-                                                ))}
-                                            </ul>
+                                <div className="mt-3 space-y-4">
+                                    {/* Hierarchy as clean vertical list */}
+                                    {sharedHierarchy.length > 0 && (
+                                        <div className="bg-white/80 rounded-lg border border-green-200 overflow-hidden">
+                                            {sharedHierarchy.map((level, idx) => (
+                                                <div
+                                                    key={level.code}
+                                                    className={`flex items-center gap-3 px-3 py-2 ${idx !== sharedHierarchy.length - 1 ? 'border-b border-green-100' : ''}`}
+                                                >
+                                                    <span className="text-[10px] font-bold text-green-500 uppercase w-14 flex-shrink-0">{level.label}</span>
+                                                    <span className="font-mono text-sm text-slate-800 font-medium">{level.code}</span>
+                                                    {level.classification?.title && (
+                                                        <span className="text-sm text-slate-500 truncate">{level.classification.title}</span>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
-                                    {sharedExcludes.length > 0 && (
-                                        <div>
-                                            <div className="text-xs font-semibold text-rose-700 mb-1">Excludes</div>
-                                            <ul className="text-xs text-slate-700 list-disc list-inside space-y-1">
-                                                {sharedExcludes.slice(0, 4).map((line) => (
-                                                    <li key={line}>{line}</li>
-                                                ))}
-                                            </ul>
+                                    {/* Includes/Excludes in clean cards */}
+                                    {hasSharedDetails && (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {sharedIncludes.length > 0 && (
+                                                <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
+                                                    <div className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2">Includes</div>
+                                                    <ul className="space-y-1.5">
+                                                        {sharedIncludes.slice(0, 4).map((line) => (
+                                                            <li key={line} className="text-xs text-slate-700 flex gap-2">
+                                                                <span className="text-emerald-400 flex-shrink-0">•</span>
+                                                                <span>{line}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                            {sharedExcludes.length > 0 && (
+                                                <div className="bg-rose-50 rounded-lg p-3 border border-rose-100">
+                                                    <div className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-2">Excludes</div>
+                                                    <ul className="space-y-1.5">
+                                                        {sharedExcludes.slice(0, 4).map((line) => (
+                                                            <li key={line} className="text-xs text-slate-700 flex gap-2">
+                                                                <span className="text-rose-400 flex-shrink-0">•</span>
+                                                                <span>{line}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -173,79 +180,79 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
                     )}
                 </div>
             ) : (
-                <div className="grid grid-cols-2 gap-8">
-                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                            Existing Label
+                <div className="grid grid-cols-2 gap-4">
+                    {/* Existing Label - Left */}
+                    <div className="p-5 bg-slate-50 rounded-lg border-2 border-slate-200">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2.5 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-full uppercase tracking-wide">
+                                Existing
+                            </span>
+                            <span className="font-mono text-xl font-bold text-slate-600">{item.existing_code || "N/A"}</span>
                         </div>
-                        <div className="text-4xl font-mono font-light text-slate-600 mb-1">
-                            {item.existing_code || "N/A"}
-                        </div>
-                        <div className="text-xl font-semibold text-slate-900">
+                        <h3 className="text-2xl font-extrabold text-slate-800 leading-tight">
                             {existingLabel}
-                        </div>
-                        {existingHierarchy.find(h => h.label === "Class") && (
-                            <div className="flex flex-wrap items-center gap-2 mt-2 text-slate-800">
-                                <span className="font-mono text-lg">{item.existing_code}</span>
-                                <span className="text-sm px-2 py-1 rounded bg-white border border-slate-200 flex items-center gap-1">
-                                    <span className="font-semibold text-slate-700">Class:</span>
-                                    <span className="font-mono text-slate-900">
-                                        {existingHierarchy.find(h => h.label === "Class")?.code}
-                                    </span>
-                                    {existingHierarchy.find(h => h.label === "Class")?.classification?.title && (
-                                        <span className="text-slate-600">
-                                            • {existingHierarchy.find(h => h.label === "Class")?.classification?.title}
-                                        </span>
-                                    )}
-                                </span>
-                            </div>
-                        )}
-                        {existingHierarchy.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {existingHierarchy.map((level) => (
-                                    <div key={level.code} className="px-2 py-1 rounded bg-white border border-slate-200 text-xs flex items-center gap-1">
-                                        <span className="font-semibold text-slate-700">{level.label}:</span>
-                                        <span className="font-mono text-slate-900">{level.code}</span>
-                                        {level.classification?.title && (
-                                            <span className="text-slate-600">• {level.classification.title}</span>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        </h3>
                         {existingClassification?.intro && (
-                            <p className="text-sm text-slate-600 mt-3 leading-relaxed">
+                            <p className="text-sm text-slate-600 mt-2 leading-relaxed line-clamp-2">
                                 {existingClassification.intro}
                             </p>
                         )}
-                        {hasExistingDetails && (
-                            <div className="mt-3">
+                        {(existingHierarchy.length > 0 || hasExistingDetails) && (
+                            <div className="mt-4 pt-3 border-t border-slate-200">
                                 <button
                                     onClick={() => setShowExistingDetails(v => !v)}
-                                    className="text-xs font-semibold text-blue-700 hover:text-blue-800"
+                                    className="text-sm font-medium text-slate-600 hover:text-slate-800 flex items-center gap-1"
                                 >
                                     {showExistingDetails ? "Hide details" : "Show more"}
                                 </button>
                                 {showExistingDetails && (
-                                    <div className="mt-3 grid grid-cols-2 gap-3">
-                                        {existingIncludes.length > 0 && (
-                                            <div>
-                                                <div className="text-xs font-semibold text-emerald-700 mb-1">Includes</div>
-                                                <ul className="text-xs text-slate-600 list-disc list-inside space-y-1">
-                                                    {existingIncludes.slice(0, 4).map((line) => (
-                                                        <li key={line}>{line}</li>
-                                                    ))}
-                                                </ul>
+                                    <div className="mt-3 space-y-4">
+                                        {/* Hierarchy as clean vertical list */}
+                                        {existingHierarchy.length > 0 && (
+                                            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                                                {existingHierarchy.map((level, idx) => (
+                                                    <div
+                                                        key={level.code}
+                                                        className={`flex items-center gap-3 px-3 py-2 ${idx !== existingHierarchy.length - 1 ? 'border-b border-slate-100' : ''}`}
+                                                    >
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase w-14 flex-shrink-0">{level.label}</span>
+                                                        <span className="font-mono text-sm text-slate-800 font-medium">{level.code}</span>
+                                                        {level.classification?.title && (
+                                                            <span className="text-sm text-slate-500 truncate">{level.classification.title}</span>
+                                                        )}
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
-                                        {existingExcludes.length > 0 && (
-                                            <div>
-                                                <div className="text-xs font-semibold text-rose-700 mb-1">Excludes</div>
-                                                <ul className="text-xs text-slate-600 list-disc list-inside space-y-1">
-                                                    {existingExcludes.slice(0, 4).map((line) => (
-                                                        <li key={line}>{line}</li>
-                                                    ))}
-                                                </ul>
+                                        {/* Includes/Excludes in clean cards */}
+                                        {hasExistingDetails && (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {existingIncludes.length > 0 && (
+                                                    <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
+                                                        <div className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2">Includes</div>
+                                                        <ul className="space-y-1.5">
+                                                            {existingIncludes.slice(0, 4).map((line) => (
+                                                                <li key={line} className="text-xs text-slate-700 flex gap-2">
+                                                                    <span className="text-emerald-400 flex-shrink-0">•</span>
+                                                                    <span>{line}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                                {existingExcludes.length > 0 && (
+                                                    <div className="bg-rose-50 rounded-lg p-3 border border-rose-100">
+                                                        <div className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-2">Excludes</div>
+                                                        <ul className="space-y-1.5">
+                                                            {existingExcludes.slice(0, 4).map((line) => (
+                                                                <li key={line} className="text-xs text-slate-700 flex gap-2">
+                                                                    <span className="text-rose-400 flex-shrink-0">•</span>
+                                                                    <span>{line}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -254,81 +261,81 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
                         )}
                     </div>
 
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 relative overflow-hidden">
+                    {/* Model Prediction - Right */}
+                    <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-300 relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-2 opacity-10">
                             <BadgeCheck size={80} />
                         </div>
-                        <div className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-3">
-                            Model Prediction
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2.5 py-1 bg-blue-500 text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                                Model
+                            </span>
+                            <span className="font-mono text-xl font-bold text-slate-800">{item.model_code || "N/A"}</span>
                         </div>
-                        <div className="text-4xl font-mono font-bold text-slate-900 mb-1">
-                            {item.model_code || "N/A"}
-                        </div>
-                        <div className="text-xl font-semibold text-slate-900">
+                        <h3 className="text-2xl font-extrabold text-slate-900 leading-tight">
                             {modelLabel}
-                        </div>
-                        {modelHierarchy.find(h => h.label === "Class") && (
-                            <div className="flex flex-wrap items-center gap-2 mt-2 text-slate-800">
-                                <span className="font-mono text-lg">{item.model_code}</span>
-                                <span className="text-sm px-2 py-1 rounded bg-white/70 border border-blue-100 flex items-center gap-1">
-                                    <span className="font-semibold text-slate-700">Class:</span>
-                                    <span className="font-mono text-slate-900">
-                                        {modelHierarchy.find(h => h.label === "Class")?.code}
-                                    </span>
-                                    {modelHierarchy.find(h => h.label === "Class")?.classification?.title && (
-                                        <span className="text-slate-600">
-                                            • {modelHierarchy.find(h => h.label === "Class")?.classification?.title}
-                                        </span>
-                                    )}
-                                </span>
-                            </div>
-                        )}
-                        {modelHierarchy.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {modelHierarchy.map((level) => (
-                                    <div key={level.code} className="px-2 py-1 rounded bg-white/70 border border-blue-100 text-xs flex items-center gap-1">
-                                        <span className="font-semibold text-slate-700">{level.label}:</span>
-                                        <span className="font-mono text-slate-900">{level.code}</span>
-                                        {level.classification?.title && (
-                                            <span className="text-slate-600">• {level.classification.title}</span>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        </h3>
                         {modelClassification?.intro && (
-                            <p className="text-sm text-slate-700 mt-3 leading-relaxed">
+                            <p className="text-sm text-slate-600 mt-2 leading-relaxed line-clamp-2">
                                 {modelClassification.intro}
                             </p>
                         )}
-                        {hasModelDetails && (
-                            <div className="mt-3">
+                        {(modelHierarchy.length > 0 || hasModelDetails) && (
+                            <div className="mt-4 pt-3 border-t border-blue-200/50">
                                 <button
                                     onClick={() => setShowModelDetails(v => !v)}
-                                    className="text-xs font-semibold text-blue-700 hover:text-blue-800"
+                                    className="text-sm font-medium text-blue-700 hover:text-blue-800 flex items-center gap-1"
                                 >
                                     {showModelDetails ? "Hide details" : "Show more"}
                                 </button>
                                 {showModelDetails && (
-                                    <div className="mt-3 grid grid-cols-2 gap-3">
-                                        {modelIncludes.length > 0 && (
-                                            <div>
-                                                <div className="text-xs font-semibold text-emerald-700 mb-1">Includes</div>
-                                                <ul className="text-xs text-slate-700 list-disc list-inside space-y-1">
-                                                    {modelIncludes.slice(0, 4).map((line) => (
-                                                        <li key={line}>{line}</li>
-                                                    ))}
-                                                </ul>
+                                    <div className="mt-3 space-y-4">
+                                        {/* Hierarchy as clean vertical list */}
+                                        {modelHierarchy.length > 0 && (
+                                            <div className="bg-white/80 rounded-lg border border-blue-200 overflow-hidden">
+                                                {modelHierarchy.map((level, idx) => (
+                                                    <div
+                                                        key={level.code}
+                                                        className={`flex items-center gap-3 px-3 py-2 ${idx !== modelHierarchy.length - 1 ? 'border-b border-blue-100' : ''}`}
+                                                    >
+                                                        <span className="text-[10px] font-bold text-blue-400 uppercase w-14 flex-shrink-0">{level.label}</span>
+                                                        <span className="font-mono text-sm text-slate-800 font-medium">{level.code}</span>
+                                                        {level.classification?.title && (
+                                                            <span className="text-sm text-slate-500 truncate">{level.classification.title}</span>
+                                                        )}
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
-                                        {modelExcludes.length > 0 && (
-                                            <div>
-                                                <div className="text-xs font-semibold text-rose-700 mb-1">Excludes</div>
-                                                <ul className="text-xs text-slate-700 list-disc list-inside space-y-1">
-                                                    {modelExcludes.slice(0, 4).map((line) => (
-                                                        <li key={line}>{line}</li>
-                                                    ))}
-                                                </ul>
+                                        {/* Includes/Excludes in clean cards */}
+                                        {hasModelDetails && (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {modelIncludes.length > 0 && (
+                                                    <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
+                                                        <div className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2">Includes</div>
+                                                        <ul className="space-y-1.5">
+                                                            {modelIncludes.slice(0, 4).map((line) => (
+                                                                <li key={line} className="text-xs text-slate-700 flex gap-2">
+                                                                    <span className="text-emerald-400 flex-shrink-0">•</span>
+                                                                    <span>{line}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                                {modelExcludes.length > 0 && (
+                                                    <div className="bg-rose-50 rounded-lg p-3 border border-rose-100">
+                                                        <div className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-2">Excludes</div>
+                                                        <ul className="space-y-1.5">
+                                                            {modelExcludes.slice(0, 4).map((line) => (
+                                                                <li key={line} className="text-xs text-slate-700 flex gap-2">
+                                                                    <span className="text-rose-400 flex-shrink-0">•</span>
+                                                                    <span>{line}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>

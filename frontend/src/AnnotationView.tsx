@@ -183,31 +183,6 @@ export function AnnotationView() {
                 onSelect={(code) => handleAction('fix', code)}
             />
 
-            <div className="mt-6 text-center text-xs text-slate-400 font-mono">
-                {Boolean(
-                    currentItem?.existing_code &&
-                    currentItem?.model_code &&
-                    currentItem.existing_code !== currentItem.model_code
-                ) ? (
-                    <div className="mt-2 space-x-3">
-                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">X</kbd> Accept Existing</span>
-                        <span>•</span>
-                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">M</kbd> Accept Model</span>
-                        <span>•</span>
-                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">F</kbd> Fix</span>
-                        <span>•</span>
-                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">E</kbd> Escalate</span>
-                    </div>
-                ) : (
-                    <div className="space-x-3">
-                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">A</kbd> Accept</span>
-                        <span>•</span>
-                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">F</kbd> Fix</span>
-                        <span>•</span>
-                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">E</kbd> Escalate</span>
-                    </div>
-                )}
-            </div>
         </div>
     );
 }
