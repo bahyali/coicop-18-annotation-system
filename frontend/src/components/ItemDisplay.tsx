@@ -99,12 +99,25 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
                     <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-3">
                         Model & Existing Match
                     </div>
-                    <div className="text-4xl font-mono font-bold text-slate-900 mb-1 flex items-center gap-3">
-                        {item.model_code}
-                        <span className="text-sm px-2 py-1 bg-green-100 text-green-700 rounded-full">Matched</span>
-                    </div>
-                    <div className="text-lg font-medium text-slate-800">
+                    <div className="text-2xl font-bold text-slate-900">
                         {sharedClassification?.title || modelLabel}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-slate-800 mt-2">
+                        <span className="font-mono text-xl">{item.model_code}</span>
+                        <span className="text-sm px-2 py-1 bg-green-100 text-green-700 rounded-full">Matched</span>
+                        {sharedHierarchy.find(h => h.label === "Class") && (
+                            <span className="text-sm px-2 py-1 rounded bg-white/70 border border-blue-100 flex items-center gap-1">
+                                <span className="font-semibold text-slate-700">Class:</span>
+                                <span className="font-mono text-slate-900">
+                                    {sharedHierarchy.find(h => h.label === "Class")?.code}
+                                </span>
+                                {sharedHierarchy.find(h => h.label === "Class")?.classification?.title && (
+                                    <span className="text-slate-600">
+                                        • {sharedHierarchy.find(h => h.label === "Class")?.classification?.title}
+                                    </span>
+                                )}
+                            </span>
+                        )}
                     </div>
                     {sharedHierarchy.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
@@ -168,9 +181,25 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
                         <div className="text-4xl font-mono font-light text-slate-600 mb-1">
                             {item.existing_code || "N/A"}
                         </div>
-                        <div className="text-lg text-slate-700">
+                        <div className="text-xl font-semibold text-slate-900">
                             {existingLabel}
                         </div>
+                        {existingHierarchy.find(h => h.label === "Class") && (
+                            <div className="flex flex-wrap items-center gap-2 mt-2 text-slate-800">
+                                <span className="font-mono text-lg">{item.existing_code}</span>
+                                <span className="text-sm px-2 py-1 rounded bg-white border border-slate-200 flex items-center gap-1">
+                                    <span className="font-semibold text-slate-700">Class:</span>
+                                    <span className="font-mono text-slate-900">
+                                        {existingHierarchy.find(h => h.label === "Class")?.code}
+                                    </span>
+                                    {existingHierarchy.find(h => h.label === "Class")?.classification?.title && (
+                                        <span className="text-slate-600">
+                                            • {existingHierarchy.find(h => h.label === "Class")?.classification?.title}
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
+                        )}
                         {existingHierarchy.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {existingHierarchy.map((level) => (
@@ -235,9 +264,25 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
                         <div className="text-4xl font-mono font-bold text-slate-900 mb-1">
                             {item.model_code || "N/A"}
                         </div>
-                        <div className="text-lg font-medium text-slate-800">
+                        <div className="text-xl font-semibold text-slate-900">
                             {modelLabel}
                         </div>
+                        {modelHierarchy.find(h => h.label === "Class") && (
+                            <div className="flex flex-wrap items-center gap-2 mt-2 text-slate-800">
+                                <span className="font-mono text-lg">{item.model_code}</span>
+                                <span className="text-sm px-2 py-1 rounded bg-white/70 border border-blue-100 flex items-center gap-1">
+                                    <span className="font-semibold text-slate-700">Class:</span>
+                                    <span className="font-mono text-slate-900">
+                                        {modelHierarchy.find(h => h.label === "Class")?.code}
+                                    </span>
+                                    {modelHierarchy.find(h => h.label === "Class")?.classification?.title && (
+                                        <span className="text-slate-600">
+                                            • {modelHierarchy.find(h => h.label === "Class")?.classification?.title}
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
+                        )}
                         {modelHierarchy.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {modelHierarchy.map((level) => (

@@ -14,19 +14,6 @@ export function ActionPanel({ onAction, disabled, conflict, existingCode, modelC
             {conflict ? (
                 <>
                     <button
-                        onClick={() => onAction('accept', modelCode || undefined)}
-                        disabled={disabled}
-                        className="group relative flex flex-col items-center gap-2 p-6 w-44 bg-white border-2 border-green-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                    >
-                        <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-                            <Check size={24} strokeWidth={3} />
-                        </div>
-                        <span className="font-bold text-slate-700 group-hover:text-green-700">Accept Model</span>
-                        <div className="text-xs text-slate-400">Use {modelCode || "model code"}</div>
-                        <div className="absolute top-2 right-2 text-xs font-mono text-slate-300 border border-slate-200 rounded px-1.5 py-0.5">M</div>
-                    </button>
-
-                    <button
                         onClick={() => onAction('accept', existingCode || undefined)}
                         disabled={disabled}
                         className="group relative flex flex-col items-center gap-2 p-6 w-44 bg-white border-2 border-emerald-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
@@ -38,8 +25,20 @@ export function ActionPanel({ onAction, disabled, conflict, existingCode, modelC
                         <div className="text-xs text-slate-400">Use {existingCode || "existing code"}</div>
                         <div className="absolute top-2 right-2 text-xs font-mono text-slate-300 border border-slate-200 rounded px-1.5 py-0.5">X</div>
                     </button>
+                    <button
+                        onClick={() => onAction('accept', modelCode || undefined)}
+                        disabled={disabled}
+                        className="group relative flex flex-col items-center gap-2 p-6 w-44 bg-white border-2 border-green-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                        <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                            <Check size={24} strokeWidth={3} />
+                        </div>
+                        <span className="font-bold text-slate-700 group-hover:text-green-700">Accept Model</span>
+                        <div className="text-xs text-slate-400">Use {modelCode || "model code"}</div>
+                        <div className="absolute top-2 right-2 text-xs font-mono text-slate-300 border border-slate-200 rounded px-1.5 py-0.5">M</div>
+                    </button>
                     <div className="w-full text-center text-xs text-slate-500 mt-2">
-                        Shortcut A disabled while codes conflict. Use M or X.
+                        Shortcut A disabled while codes conflict. Use X or M.
                     </div>
                 </>
             ) : (

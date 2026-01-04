@@ -175,11 +175,6 @@ export function AnnotationView() {
                     modelCode={currentItem.model_code}
                 />
 
-                <div className="mt-12 text-center text-xs text-slate-400 font-mono">
-                    Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">A</kbd> to Accept •
-                    Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">F</kbd> to Fix •
-                    Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">E</kbd> to Escalate
-                </div>
             </div>
 
             <FixPanel
@@ -195,9 +190,9 @@ export function AnnotationView() {
                     currentItem.existing_code !== currentItem.model_code
                 ) ? (
                     <div className="mt-2 space-x-3">
-                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">M</kbd> Accept Model</span>
-                        <span>•</span>
                         <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">X</kbd> Accept Existing</span>
+                        <span>•</span>
+                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">M</kbd> Accept Model</span>
                         <span>•</span>
                         <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">F</kbd> Fix</span>
                         <span>•</span>
