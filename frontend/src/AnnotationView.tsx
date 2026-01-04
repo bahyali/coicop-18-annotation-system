@@ -30,10 +30,10 @@ export function AnnotationView() {
         loadNext();
     }, [loadNext]);
 
-    const handleAction = async (action: 'accept' | 'fix' | 'escalate', fixedCode?: string) => {
+    const handleAction = async (action: 'accept' | 'fix' | 'escalate', codeOverride?: string) => {
         if (!currentItem || processing) return;
 
-        if (action === 'fix' && !fixedCode) {
+        if (action === 'fix' && !codeOverride) {
             setIsFixPanelOpen(true);
             return;
         }
@@ -47,7 +47,7 @@ export function AnnotationView() {
                 item_id: currentItem.id,
                 reviewer_id: userId,
                 action,
-                final_code: fixedCode || (action === 'accept' ? (currentItem.model_code || currentItem.existing_code || "") : ""),
+                final_code: codeOverride || (action === 'accept' ? (currentItem.model_code || currentItem.existing_code || "") : ""),
                 time_spent_ms: 0, // TODO: Track time
             };
 
@@ -66,10 +66,25 @@ export function AnnotationView() {
             // Ignore if typing in an input
             if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
             if (isFixPanelOpen) return; // Let FixPanel handle its own keys
+            const hasConflict = Boolean(
+                currentItem?.existing_code &&
+                currentItem?.model_code &&
+                currentItem.existing_code !== currentItem.model_code
+            );
 
             switch (e.key.toLowerCase()) {
                 case 'a':
-                    handleAction('accept');
+                    if (!hasConflict) handleAction('accept');
+                    break;
+                case 'm':
+                    if (hasConflict) {
+                        handleAction('accept', currentItem?.model_code || undefined);
+                    }
+                    break;
+                case 'x':
+                    if (hasConflict) {
+                        handleAction('accept', currentItem?.existing_code || undefined);
+                    }
                     break;
                 case 'f':
                     handleAction('fix');
@@ -152,7 +167,13 @@ export function AnnotationView() {
                     modelClassification={currentItem.model_code ? classifications[currentItem.model_code] : null}
                 />
 
-                <ActionPanel onAction={handleAction} disabled={processing} />
+                <ActionPanel
+                    onAction={handleAction}
+                    disabled={processing}
+                    conflict={Boolean(currentItem.existing_code && currentItem.model_code && currentItem.existing_code !== currentItem.model_code)}
+                    existingCode={currentItem.existing_code}
+                    modelCode={currentItem.model_code}
+                />
 
                 <div className="mt-12 text-center text-xs text-slate-400 font-mono">
                     Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">A</kbd> to Accept •
@@ -166,6 +187,32 @@ export function AnnotationView() {
                 onClose={() => setIsFixPanelOpen(false)}
                 onSelect={(code) => handleAction('fix', code)}
             />
+
+            <div className="mt-6 text-center text-xs text-slate-400 font-mono">
+                {Boolean(
+                    currentItem?.existing_code &&
+                    currentItem?.model_code &&
+                    currentItem.existing_code !== currentItem.model_code
+                ) ? (
+                    <div className="mt-2 space-x-3">
+                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">M</kbd> Accept Model</span>
+                        <span>•</span>
+                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">X</kbd> Accept Existing</span>
+                        <span>•</span>
+                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">F</kbd> Fix</span>
+                        <span>•</span>
+                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">E</kbd> Escalate</span>
+                    </div>
+                ) : (
+                    <div className="space-x-3">
+                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">A</kbd> Accept</span>
+                        <span>•</span>
+                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">F</kbd> Fix</span>
+                        <span>•</span>
+                        <span>Press <kbd className="bg-white px-1 py-0.5 rounded border border-slate-200 text-slate-600">E</kbd> Escalate</span>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
