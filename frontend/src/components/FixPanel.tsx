@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Search, X, Check, Loader2, BookOpen } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Search, X, Check, Loader2, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { clsx } from 'clsx';
 import { searchClassifications, fetchClassification, type Classification } from '../api';
 
@@ -59,6 +59,21 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [classificationMap, setClassificationMap] = useState<Record<string, Classification | null>>({});
+    const [showInformational, setShowInformational] = useState(false);
+
+    // Filter results: only show Class items unless toggle is on
+    const displayResults = useMemo(() => {
+        if (showInformational) return results;
+        return results.filter(item => levelLabel(item.code) === "Class");
+    }, [results, showInformational]);
+
+    // Get only selectable (Class) items for keyboard navigation
+    const selectableIndices = useMemo(() => {
+        return displayResults
+            .map((item, idx) => ({ item, idx }))
+            .filter(({ item }) => levelLabel(item.code) === "Class")
+            .map(({ idx }) => idx);
+    }, [displayResults]);
 
     useEffect(() => {
         if (isOpen) {
@@ -67,8 +82,16 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
             setSelectedIndex(0);
             setError(null);
             setResults([]);
+            setShowInformational(false);
         }
     }, [isOpen]);
+
+    // Reset selected index to first selectable item when display results change
+    useEffect(() => {
+        if (selectableIndices.length > 0 && !selectableIndices.includes(selectedIndex)) {
+            setSelectedIndex(selectableIndices[0]);
+        }
+    }, [selectableIndices, selectedIndex]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -99,23 +122,28 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
         return () => clearTimeout(timeout);
     }, [query, isOpen]);
 
-    // Keyboard navigation
+    // Keyboard navigation - only navigate through selectable (Class) items
     useEffect(() => {
         if (!isOpen) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                if (results.length === 0) return;
-                setSelectedIndex(i => Math.min(i + 1, results.length - 1));
+                if (selectableIndices.length === 0) return;
+                const currentPos = selectableIndices.indexOf(selectedIndex);
+                const nextPos = Math.min(currentPos + 1, selectableIndices.length - 1);
+                setSelectedIndex(selectableIndices[nextPos]);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                if (results.length === 0) return;
-                setSelectedIndex(i => Math.max(i - 1, 0));
+                if (selectableIndices.length === 0) return;
+                const currentPos = selectableIndices.indexOf(selectedIndex);
+                const prevPos = Math.max(currentPos - 1, 0);
+                setSelectedIndex(selectableIndices[prevPos]);
             } else if (e.key === 'Enter') {
                 e.preventDefault();
-                if (results[selectedIndex]) {
-                    onSelect(results[selectedIndex].code);
+                const item = displayResults[selectedIndex];
+                if (item && levelLabel(item.code) === "Class") {
+                    onSelect(item.code);
                 }
             } else if (e.key === 'Escape') {
                 onClose();
@@ -124,7 +152,7 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, results, selectedIndex, onSelect, onClose]);
+    }, [isOpen, displayResults, selectedIndex, selectableIndices, onSelect, onClose]);
 
     useEffect(() => {
         if (!isOpen || results.length === 0) return;
@@ -161,6 +189,19 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
                         value={query}
                         onChange={e => { setQuery(e.target.value); setSelectedIndex(0); }}
                     />
+                    <button
+                        onClick={() => setShowInformational(v => !v)}
+                        className={clsx(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                            showInformational
+                                ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
+                        )}
+                        title={showInformational ? "Hide Division/Group items" : "Show Division/Group items"}
+                    >
+                        {showInformational ? <EyeOff size={14} /> : <Eye size={14} />}
+                        {showInformational ? "Hide" : "Show"} context
+                    </button>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
                         <X size={20} />
                     </button>
@@ -178,13 +219,13 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
                             {error}
                         </div>
                     )}
-                    {!loading && !error && results.length === 0 ? (
+                    {!loading && !error && displayResults.length === 0 ? (
                         <div className="p-8 text-center text-slate-400">
-                            No matches found.
+                            {results.length === 0 ? "No matches found." : "No Class-level items found. Toggle 'Show context' to see Division/Group items."}
                         </div>
                     ) : (
                         <ul className="space-y-2">
-                            {results.map((item, index) => {
+                            {displayResults.map((item, index) => {
                                 const level = levelLabel(item.code);
                                 const isClass = level === "Class";
                                 const hierarchy = buildHierarchy(item.code, classificationMap).slice(0, 3);
