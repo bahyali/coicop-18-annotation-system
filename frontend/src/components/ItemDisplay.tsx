@@ -41,7 +41,7 @@ const buildHierarchy = (
 };
 
 export function ItemDisplay({ item, classificationMap = {}, existingClassification, modelClassification }: ItemDisplayProps) {
-    const isHighConfidence = item.confidence_score >= 0.8;
+    // const isHighConfidence = item.confidence_score >= 0.8;
     const existingLabel = existingClassification?.title || item.existing_label || "No existing label";
     const modelLabel = modelClassification?.title || item.model_label || "No prediction";
     const existingIncludes = parseList(existingClassification?.includes);
@@ -75,37 +75,21 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
                 <h1 className="text-3xl font-extrabold text-slate-900 leading-tight mb-2">
                     {item.description}
                 </h1>
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <div className={clsx(
-                        "px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5",
-                        isHighConfidence ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                    )}>
-                        {isHighConfidence ? <BadgeCheck size={16} /> : <AlertCircle size={16} />}
-                        {Math.round(item.confidence_score * 100)}% Conf.
-                    </div>
-                    {item.queue && (
-                        <span className="px-2 py-1 text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-700 rounded">
-                            {item.queue.replace('_', ' ')}
-                        </span>
-                    )}
-                </div>
+
             </div>
 
             {codesMatch ? (
-                <div className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border-2 border-green-200 relative overflow-hidden">
+                <div className="p-5 bg-slate-50 rounded-lg border-2 border-slate-100 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-3 opacity-10">
                         <BadgeCheck size={90} />
                     </div>
                     {/* Primary: Match confirmation + Code */}
                     <div className="flex items-center gap-3 mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500 text-white text-sm font-bold rounded-full shadow-sm">
-                            <BadgeCheck size={16} />
-                            Match Confirmed
-                        </span>
-                        <span className="font-mono text-2xl font-bold text-slate-800">{item.model_code}</span>
+
+                        <span className="font-mono text-xl font-bold text-slate-800">{item.model_code}</span>
                     </div>
                     {/* Secondary: Classification title - the main info */}
-                    <h2 className="text-3xl font-extrabold text-slate-900 leading-tight">
+                    <h2 className="text-xl font-extrabold text-slate-900 leading-tight">
                         {sharedClassification?.title || modelLabel}
                     </h2>
                     {/* Tertiary: Brief description if available */}
