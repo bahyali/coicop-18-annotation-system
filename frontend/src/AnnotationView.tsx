@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { fetchNextItem, submitDecision, fetchClassification } from './api';
 import type { Item, Decision, Classification } from './api';
 import { ItemDisplay } from './components/ItemDisplay';
-import { ActionPanel } from './components/ActionPanel';
 import { FixPanel } from './components/FixPanel';
 import { Loader2 } from 'lucide-react';
 
@@ -165,14 +164,8 @@ export function AnnotationView() {
                     classificationMap={classifications}
                     existingClassification={currentItem.existing_code ? classifications[currentItem.existing_code] : null}
                     modelClassification={currentItem.model_code ? classifications[currentItem.model_code] : null}
-                />
-
-                <ActionPanel
                     onAction={handleAction}
                     disabled={processing}
-                    conflict={Boolean(currentItem.existing_code && currentItem.model_code && currentItem.existing_code !== currentItem.model_code)}
-                    existingCode={currentItem.existing_code}
-                    modelCode={currentItem.model_code}
                 />
 
             </div>

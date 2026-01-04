@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { type Item, type Classification } from '../api';
-import { clsx } from 'clsx';
-import { BadgeCheck, AlertCircle, Tag, Package } from 'lucide-react';
+import { BadgeCheck, Tag, Package, Check, Edit2, AlertTriangle } from 'lucide-react';
 
 interface ItemDisplayProps {
     item: Item;
     classificationMap?: Record<string, Classification | null>;
     existingClassification?: Classification | null;
     modelClassification?: Classification | null;
+    onAction?: (action: 'accept' | 'fix' | 'escalate', codeOverride?: string) => void;
+    disabled?: boolean;
 }
 
 const parseList = (text?: string) => {
@@ -40,8 +41,93 @@ const buildHierarchy = (
     }));
 };
 
-export function ItemDisplay({ item, classificationMap = {}, existingClassification, modelClassification }: ItemDisplayProps) {
-    // const isHighConfidence = item.confidence_score >= 0.8;
+function DetailsSection({
+    hierarchy,
+    includes,
+    excludes,
+    show,
+    onToggle,
+    borderColor = 'slate'
+}: {
+    hierarchy: { label: string; code: string; classification: Classification | null }[];
+    includes: string[];
+    excludes: string[];
+    show: boolean;
+    onToggle: () => void;
+    borderColor?: 'slate' | 'blue' | 'green';
+}) {
+    const hasDetails = includes.length > 0 || excludes.length > 0;
+    if (hierarchy.length === 0 && !hasDetails) return null;
+
+    const colors = {
+        slate: { border: 'border-slate-200', text: 'text-slate-600', label: 'text-slate-400' },
+        blue: { border: 'border-blue-200', text: 'text-blue-700', label: 'text-blue-400' },
+        green: { border: 'border-green-200', text: 'text-green-700', label: 'text-green-500' },
+    };
+
+    return (
+        <div className={`mt-3 pt-3 border-t ${colors[borderColor].border}`}>
+            <button
+                onClick={onToggle}
+                className={`text-sm font-medium ${colors[borderColor].text} hover:opacity-80`}
+            >
+                {show ? "Hide details" : "Show more"}
+            </button>
+            {show && (
+                <div className="mt-3 space-y-3">
+                    {hierarchy.length > 0 && (
+                        <div className={`bg-white/80 rounded-lg border ${colors[borderColor].border} overflow-hidden`}>
+                            {hierarchy.map((level, idx) => (
+                                <div
+                                    key={level.code}
+                                    className={`flex items-center gap-3 px-3 py-2 ${idx !== hierarchy.length - 1 ? `border-b ${colors[borderColor].border}` : ''}`}
+                                >
+                                    <span className={`text-[10px] font-bold ${colors[borderColor].label} uppercase w-14 flex-shrink-0`}>{level.label}</span>
+                                    <span className="font-mono text-sm text-slate-800 font-medium">{level.code}</span>
+                                    {level.classification?.title && (
+                                        <span className="text-sm text-slate-500 truncate">{level.classification.title}</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {hasDetails && (
+                        <div className="grid grid-cols-2 gap-3">
+                            {includes.length > 0 && (
+                                <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
+                                    <div className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2">Includes</div>
+                                    <ul className="space-y-1.5">
+                                        {includes.slice(0, 4).map((line) => (
+                                            <li key={line} className="text-xs text-slate-700 flex gap-2">
+                                                <span className="text-emerald-400 flex-shrink-0">•</span>
+                                                <span>{line}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {excludes.length > 0 && (
+                                <div className="bg-rose-50 rounded-lg p-3 border border-rose-100">
+                                    <div className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-2">Excludes</div>
+                                    <ul className="space-y-1.5">
+                                        {excludes.slice(0, 4).map((line) => (
+                                            <li key={line} className="text-xs text-slate-700 flex gap-2">
+                                                <span className="text-rose-400 flex-shrink-0">•</span>
+                                                <span>{line}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+export function ItemDisplay({ item, classificationMap = {}, existingClassification, modelClassification, onAction, disabled }: ItemDisplayProps) {
     const existingLabel = existingClassification?.title || item.existing_label || "No existing label";
     const modelLabel = modelClassification?.title || item.model_label || "No prediction";
     const existingIncludes = parseList(existingClassification?.includes);
@@ -52,9 +138,6 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
     const sharedClassification = codesMatch ? (modelClassification || existingClassification) : null;
     const sharedIncludes = parseList(sharedClassification?.includes);
     const sharedExcludes = parseList(sharedClassification?.excludes);
-    const hasExistingDetails = existingIncludes.length > 0 || existingExcludes.length > 0;
-    const hasModelDetails = modelIncludes.length > 0 || modelExcludes.length > 0;
-    const hasSharedDetails = sharedIncludes.length > 0 || sharedExcludes.length > 0;
     const [showExistingDetails, setShowExistingDetails] = useState(false);
     const [showModelDetails, setShowModelDetails] = useState(false);
     const [showSharedDetails, setShowSharedDetails] = useState(false);
@@ -63,8 +146,9 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
     const sharedHierarchy = buildHierarchy(codesMatch ? item.model_code : undefined, classificationMap).slice(0, 3);
 
     return (
-        <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-sm border border-slate-200 space-y-6">
-            <div className="p-4 bg-gradient-to-r from-indigo-50 via-slate-50 to-white rounded-xl border border-slate-100">
+        <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100">
                 <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                     <Package size={16} />
                     <span className="font-mono">{item.id}</span>
@@ -72,108 +156,78 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
                     <Tag size={16} />
                     <span>{item.status}</span>
                 </div>
-                <h1 className="text-3xl font-extrabold text-slate-900 leading-tight mb-2">
+                <h1 className="text-2xl py-10 text-center font-extrabold text-blue-900 leading-tight">
                     {item.description}
                 </h1>
-
             </div>
 
             {codesMatch ? (
-                <div className="p-5 bg-slate-50 rounded-lg border-2 border-slate-100 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                        <BadgeCheck size={90} />
-                    </div>
-                    {/* Primary: Match confirmation + Code */}
-                    <div className="flex items-center gap-3 mb-2">
-
-                        <span className="font-mono text-xl font-bold text-slate-800">{item.model_code}</span>
-                    </div>
-                    {/* Secondary: Classification title - the main info */}
-                    <h2 className="text-xl font-extrabold text-slate-900 leading-tight">
-                        {sharedClassification?.title || modelLabel}
-                    </h2>
-                    {/* Tertiary: Brief description if available */}
-                    {sharedClassification?.intro && (
-                        <p className="text-base text-slate-600 mt-2 leading-relaxed line-clamp-2">
-                            {sharedClassification.intro}
-                        </p>
-                    )}
-                    {/* Collapsed details */}
-                    {(sharedHierarchy.length > 0 || hasSharedDetails) && (
-                        <div className="mt-4 pt-3 border-t border-green-200/50">
-                            <button
-                                onClick={() => setShowSharedDetails(v => !v)}
-                                className="text-sm font-medium text-green-700 hover:text-green-800 flex items-center gap-1"
-                            >
-                                {showSharedDetails ? "Hide details" : "Show more"}
-                                <span className="text-xs">({sharedHierarchy.length} levels)</span>
-                            </button>
-                            {showSharedDetails && (
-                                <div className="mt-3 space-y-4">
-                                    {/* Hierarchy as clean vertical list */}
-                                    {sharedHierarchy.length > 0 && (
-                                        <div className="bg-white/80 rounded-lg border border-green-200 overflow-hidden">
-                                            {sharedHierarchy.map((level, idx) => (
-                                                <div
-                                                    key={level.code}
-                                                    className={`flex items-center gap-3 px-3 py-2 ${idx !== sharedHierarchy.length - 1 ? 'border-b border-green-100' : ''}`}
-                                                >
-                                                    <span className="text-[10px] font-bold text-green-500 uppercase w-14 flex-shrink-0">{level.label}</span>
-                                                    <span className="font-mono text-sm text-slate-800 font-medium">{level.code}</span>
-                                                    {level.classification?.title && (
-                                                        <span className="text-sm text-slate-500 truncate">{level.classification.title}</span>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {/* Includes/Excludes in clean cards */}
-                                    {hasSharedDetails && (
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {sharedIncludes.length > 0 && (
-                                                <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
-                                                    <div className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2">Includes</div>
-                                                    <ul className="space-y-1.5">
-                                                        {sharedIncludes.slice(0, 4).map((line) => (
-                                                            <li key={line} className="text-xs text-slate-700 flex gap-2">
-                                                                <span className="text-emerald-400 flex-shrink-0">•</span>
-                                                                <span>{line}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                            {sharedExcludes.length > 0 && (
-                                                <div className="bg-rose-50 rounded-lg p-3 border border-rose-100">
-                                                    <div className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-2">Excludes</div>
-                                                    <ul className="space-y-1.5">
-                                                        {sharedExcludes.slice(0, 4).map((line) => (
-                                                            <li key={line} className="text-xs text-slate-700 flex gap-2">
-                                                                <span className="text-rose-400 flex-shrink-0">•</span>
-                                                                <span>{line}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                /* Match view - side by side: classification left, actions right */
+                <div className="flex">
+                    {/* Classification info - left side */}
+                    <div className="flex-1 p-5 border-r border-slate-100">
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="font-mono text-2xl font-bold text-slate-800">{item.model_code}</span>
                         </div>
-                    )}
+                        <h2 className="text-xl font-bold text-slate-900 leading-tight">
+                            {sharedClassification?.title || modelLabel}
+                        </h2>
+                        {sharedClassification?.intro && (
+                            <p className="text-sm text-slate-600 mt-2 leading-relaxed line-clamp-2">
+                                {sharedClassification.intro}
+                            </p>
+                        )}
+                        <DetailsSection
+                            hierarchy={sharedHierarchy}
+                            includes={sharedIncludes}
+                            excludes={sharedExcludes}
+                            show={showSharedDetails}
+                            onToggle={() => setShowSharedDetails(v => !v)}
+                            borderColor="slate"
+                        />
+                    </div>
+
+                    {/* Actions - right side */}
+                    <div className="w-48 p-5 flex flex-col gap-3 bg-slate-50">
+                        <button
+                            onClick={() => onAction?.('accept')}
+                            disabled={disabled}
+                            className="group flex items-center gap-2 p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all active:scale-[0.98] disabled:opacity-50"
+                        >
+                            <Check size={18} strokeWidth={3} />
+                            <span className="font-semibold text-sm">Accept</span>
+                            <span className="ml-auto text-[10px] font-mono opacity-70">A</span>
+                        </button>
+                        <button
+                            onClick={() => onAction?.('fix')}
+                            disabled={disabled}
+                            className="group flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50 transition-all active:scale-[0.98] disabled:opacity-50"
+                        >
+                            <Edit2 size={16} className="text-slate-500 group-hover:text-amber-600" />
+                            <span className="font-medium text-sm text-slate-600 group-hover:text-amber-700">Fix</span>
+                            <span className="ml-auto text-[10px] font-mono text-slate-300">F</span>
+                        </button>
+                        <button
+                            onClick={() => onAction?.('escalate')}
+                            disabled={disabled}
+                            className="group flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-all active:scale-[0.98] disabled:opacity-50"
+                        >
+                            <AlertTriangle size={16} className="text-slate-500 group-hover:text-red-500" />
+                            <span className="font-medium text-sm text-slate-600 group-hover:text-red-600">Escalate</span>
+                            <span className="ml-auto text-[10px] font-mono text-slate-300">E</span>
+                        </button>
+                    </div>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Existing Label - Left */}
-                    <div className="p-5 bg-slate-50 rounded-lg border-2 border-slate-200">
-                        <div className="flex items-center gap-2 mb-3">
-                            <span className="px-2.5 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-full uppercase tracking-wide">
-                                Existing
-                            </span>
-                            <span className="font-mono text-xl font-bold text-slate-600">{item.existing_code || "N/A"}</span>
+                /* Conflict view - two columns with integrated actions */
+                <div className="flex">
+                    {/* Existing - left side */}
+                    <div className="flex-1 p-5 border-r border-slate-100">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold rounded uppercase">Existing</span>
+                            <span className="font-mono text-lg font-bold text-slate-700">{item.existing_code || "N/A"}</span>
                         </div>
-                        <h3 className="text-2xl font-extrabold text-slate-800 leading-tight">
+                        <h3 className="text-lg font-bold text-slate-800 leading-tight">
                             {existingLabel}
                         </h3>
                         {existingClassification?.intro && (
@@ -181,82 +235,33 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
                                 {existingClassification.intro}
                             </p>
                         )}
-                        {(existingHierarchy.length > 0 || hasExistingDetails) && (
-                            <div className="mt-4 pt-3 border-t border-slate-200">
-                                <button
-                                    onClick={() => setShowExistingDetails(v => !v)}
-                                    className="text-sm font-medium text-slate-600 hover:text-slate-800 flex items-center gap-1"
-                                >
-                                    {showExistingDetails ? "Hide details" : "Show more"}
-                                </button>
-                                {showExistingDetails && (
-                                    <div className="mt-3 space-y-4">
-                                        {/* Hierarchy as clean vertical list */}
-                                        {existingHierarchy.length > 0 && (
-                                            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                                                {existingHierarchy.map((level, idx) => (
-                                                    <div
-                                                        key={level.code}
-                                                        className={`flex items-center gap-3 px-3 py-2 ${idx !== existingHierarchy.length - 1 ? 'border-b border-slate-100' : ''}`}
-                                                    >
-                                                        <span className="text-[10px] font-bold text-slate-400 uppercase w-14 flex-shrink-0">{level.label}</span>
-                                                        <span className="font-mono text-sm text-slate-800 font-medium">{level.code}</span>
-                                                        {level.classification?.title && (
-                                                            <span className="text-sm text-slate-500 truncate">{level.classification.title}</span>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        {/* Includes/Excludes in clean cards */}
-                                        {hasExistingDetails && (
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {existingIncludes.length > 0 && (
-                                                    <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
-                                                        <div className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2">Includes</div>
-                                                        <ul className="space-y-1.5">
-                                                            {existingIncludes.slice(0, 4).map((line) => (
-                                                                <li key={line} className="text-xs text-slate-700 flex gap-2">
-                                                                    <span className="text-emerald-400 flex-shrink-0">•</span>
-                                                                    <span>{line}</span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                )}
-                                                {existingExcludes.length > 0 && (
-                                                    <div className="bg-rose-50 rounded-lg p-3 border border-rose-100">
-                                                        <div className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-2">Excludes</div>
-                                                        <ul className="space-y-1.5">
-                                                            {existingExcludes.slice(0, 4).map((line) => (
-                                                                <li key={line} className="text-xs text-slate-700 flex gap-2">
-                                                                    <span className="text-rose-400 flex-shrink-0">•</span>
-                                                                    <span>{line}</span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        <DetailsSection
+                            hierarchy={existingHierarchy}
+                            includes={existingIncludes}
+                            excludes={existingExcludes}
+                            show={showExistingDetails}
+                            onToggle={() => setShowExistingDetails(v => !v)}
+                            borderColor="slate"
+                        />
+                        {/* Accept Existing button */}
+                        <button
+                            onClick={() => onAction?.('accept', item.existing_code || undefined)}
+                            disabled={disabled}
+                            className="mt-4 w-full group flex items-center justify-center gap-2 p-3 bg-slate-100 border-2 border-slate-300 rounded-lg hover:bg-slate-200 hover:border-slate-400 transition-all active:scale-[0.98] disabled:opacity-50"
+                        >
+                            <Check size={18} strokeWidth={3} className="text-slate-600" />
+                            <span className="font-semibold text-sm text-slate-700">Accept Existing</span>
+                            <span className="ml-2 text-[10px] font-mono text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded">X</span>
+                        </button>
                     </div>
 
-                    {/* Model Prediction - Right */}
-                    <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-300 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-2 opacity-10">
-                            <BadgeCheck size={80} />
+                    {/* Model - right side */}
+                    <div className="flex-1 p-5 bg-blue-50/50">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="px-2 py-0.5 bg-blue-500 text-white text-[10px] font-bold rounded uppercase">Model</span>
+                            <span className="font-mono text-lg font-bold text-slate-800">{item.model_code || "N/A"}</span>
                         </div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <span className="px-2.5 py-1 bg-blue-500 text-white text-xs font-bold rounded-full uppercase tracking-wide">
-                                Model
-                            </span>
-                            <span className="font-mono text-xl font-bold text-slate-800">{item.model_code || "N/A"}</span>
-                        </div>
-                        <h3 className="text-2xl font-extrabold text-slate-900 leading-tight">
+                        <h3 className="text-lg font-bold text-slate-900 leading-tight">
                             {modelLabel}
                         </h3>
                         {modelClassification?.intro && (
@@ -264,80 +269,60 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
                                 {modelClassification.intro}
                             </p>
                         )}
-                        {(modelHierarchy.length > 0 || hasModelDetails) && (
-                            <div className="mt-4 pt-3 border-t border-blue-200/50">
-                                <button
-                                    onClick={() => setShowModelDetails(v => !v)}
-                                    className="text-sm font-medium text-blue-700 hover:text-blue-800 flex items-center gap-1"
-                                >
-                                    {showModelDetails ? "Hide details" : "Show more"}
-                                </button>
-                                {showModelDetails && (
-                                    <div className="mt-3 space-y-4">
-                                        {/* Hierarchy as clean vertical list */}
-                                        {modelHierarchy.length > 0 && (
-                                            <div className="bg-white/80 rounded-lg border border-blue-200 overflow-hidden">
-                                                {modelHierarchy.map((level, idx) => (
-                                                    <div
-                                                        key={level.code}
-                                                        className={`flex items-center gap-3 px-3 py-2 ${idx !== modelHierarchy.length - 1 ? 'border-b border-blue-100' : ''}`}
-                                                    >
-                                                        <span className="text-[10px] font-bold text-blue-400 uppercase w-14 flex-shrink-0">{level.label}</span>
-                                                        <span className="font-mono text-sm text-slate-800 font-medium">{level.code}</span>
-                                                        {level.classification?.title && (
-                                                            <span className="text-sm text-slate-500 truncate">{level.classification.title}</span>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        {/* Includes/Excludes in clean cards */}
-                                        {hasModelDetails && (
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {modelIncludes.length > 0 && (
-                                                    <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
-                                                        <div className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2">Includes</div>
-                                                        <ul className="space-y-1.5">
-                                                            {modelIncludes.slice(0, 4).map((line) => (
-                                                                <li key={line} className="text-xs text-slate-700 flex gap-2">
-                                                                    <span className="text-emerald-400 flex-shrink-0">•</span>
-                                                                    <span>{line}</span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                )}
-                                                {modelExcludes.length > 0 && (
-                                                    <div className="bg-rose-50 rounded-lg p-3 border border-rose-100">
-                                                        <div className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-2">Excludes</div>
-                                                        <ul className="space-y-1.5">
-                                                            {modelExcludes.slice(0, 4).map((line) => (
-                                                                <li key={line} className="text-xs text-slate-700 flex gap-2">
-                                                                    <span className="text-rose-400 flex-shrink-0">•</span>
-                                                                    <span>{line}</span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        <DetailsSection
+                            hierarchy={modelHierarchy}
+                            includes={modelIncludes}
+                            excludes={modelExcludes}
+                            show={showModelDetails}
+                            onToggle={() => setShowModelDetails(v => !v)}
+                            borderColor="blue"
+                        />
+                        {/* Accept Model button */}
+                        <button
+                            onClick={() => onAction?.('accept', item.model_code || undefined)}
+                            disabled={disabled}
+                            className="mt-4 w-full group flex items-center justify-center gap-2 p-3 bg-blue-100 border-2 border-blue-300 rounded-lg hover:bg-blue-200 hover:border-blue-400 transition-all active:scale-[0.98] disabled:opacity-50"
+                        >
+                            <Check size={18} strokeWidth={3} className="text-blue-600" />
+                            <span className="font-semibold text-sm text-blue-700">Accept Model</span>
+                            <span className="ml-2 text-[10px] font-mono text-blue-400 bg-blue-200 px-1.5 py-0.5 rounded">M</span>
+                        </button>
                     </div>
+                </div>
+            )}
+
+            {/* Secondary actions for conflict view */}
+            {!codesMatch && (
+                <div className="flex justify-center gap-3 p-4 border-t border-slate-100 bg-slate-50">
+                    <button
+                        onClick={() => onAction?.('fix')}
+                        disabled={disabled}
+                        className="group flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 rounded-lg hover:border-amber-400 hover:bg-amber-50 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                        <Edit2 size={15} className="text-slate-400 group-hover:text-amber-600" />
+                        <span className="font-medium text-sm text-slate-500 group-hover:text-amber-700">Fix</span>
+                        <span className="text-[10px] font-mono text-slate-300 ml-0.5">F</span>
+                    </button>
+                    <button
+                        onClick={() => onAction?.('escalate')}
+                        disabled={disabled}
+                        className="group flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                        <AlertTriangle size={15} className="text-slate-400 group-hover:text-red-500" />
+                        <span className="font-medium text-sm text-slate-500 group-hover:text-red-600">Escalate</span>
+                        <span className="text-[10px] font-mono text-slate-300 ml-0.5">E</span>
+                    </button>
                 </div>
             )}
 
             {/* Metadata Section */}
             {Object.keys(item.meta_data).length > 0 && (
-                <div className="mt-6 pt-6 border-t border-slate-100">
-                    <h3 className="text-sm font-semibold text-slate-500 mb-3">Item Metadata</h3>
-                    <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 border-t border-slate-100">
+                    <h3 className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Metadata</h3>
+                    <div className="flex flex-wrap gap-4">
                         {Object.entries(item.meta_data).map(([key, value]) => (
                             <div key={key}>
-                                <div className="text-xs text-slate-400 mb-1 capitalize">{key.replace(/_/g, ' ')}</div>
+                                <div className="text-[10px] text-slate-400 capitalize">{key.replace(/_/g, ' ')}</div>
                                 <div className="text-sm text-slate-700 font-medium">{String(value)}</div>
                             </div>
                         ))}

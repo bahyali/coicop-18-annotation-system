@@ -78,7 +78,7 @@ export function FixPanel({ isOpen, onClose, onSelect }: FixPanelProps) {
             try {
                 setLoading(true);
                 setError(null);
-                const data = await searchClassifications(query, 8);
+                const data = await searchClassifications(query, 80);
                 const sorted = [...data].sort((a, b) => {
                     const pa = levelPriority(levelLabel(a.code));
                     const pb = levelPriority(levelLabel(b.code));
