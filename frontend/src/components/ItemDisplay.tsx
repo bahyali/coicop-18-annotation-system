@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { type Item, type Classification } from '../api';
-import { BadgeCheck, Tag, Package, Check, Edit2, AlertTriangle } from 'lucide-react';
+import { Tag, Package, Check, Edit2, AlertTriangle } from 'lucide-react';
 
 interface ItemDisplayProps {
     item: Item;
