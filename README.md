@@ -9,10 +9,11 @@ A full-stack annotation platform for validating and reviewing COICOP (Classifica
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
+- [Quick Start with Docker Hub](#quick-start-with-docker-hub)
 - [Installation](#installation)
   - [Using Setup Scripts](#using-setup-scripts)
   - [Manual Setup](#manual-setup)
-  - [Using Docker](#using-docker)
+  - [Using Docker (Build Locally)](#using-docker-build-locally)
 - [Running the Application](#running-the-application)
   - [Development Mode](#development-mode)
   - [Production Mode](#production-mode)
@@ -92,21 +93,90 @@ annotation_system/
 │   ├── Dockerfile           # Production Docker image
 │   └── Dockerfile.dev       # Development Docker image
 │
-├── docker-compose.yml       # Production Docker orchestration
+├── docker-compose.yml       # Production Docker orchestration (build locally)
 ├── docker-compose.dev.yml   # Development Docker orchestration
+├── docker-compose.hub.yml   # Docker Hub pre-built images
 ├── setup.sh                 # Unix/macOS setup script
 ├── setup.bat                # Windows setup script
 ├── run.sh                   # Unix/macOS run script
 ├── run.bat                  # Windows run script
+├── run-docker.sh            # Unix/macOS Docker Hub runner
+├── run-docker.bat           # Windows Docker Hub runner
 └── README.md
 ```
 
 ## Prerequisites
 
-- **Python** 3.8 or higher
-- **Node.js** 18 or higher
-- **npm** 8 or higher
-- **Docker** (optional, for containerized deployment)
+- **Python** 3.8 or higher (for local development)
+- **Node.js** 18 or higher (for local development)
+- **npm** 8 or higher (for local development)
+- **Docker** (for containerized deployment)
+
+## Quick Start with Docker Hub
+
+The fastest way to run the application using pre-built images from Docker Hub.
+
+### Docker Hub Images
+
+| Image | Description |
+|-------|-------------|
+| `bahyali/coicop-validation-backend:latest` | FastAPI backend server |
+| `bahyali/coicop-validation-frontend:latest` | React frontend with nginx |
+
+### Using Runner Scripts (Recommended)
+
+**Unix/macOS:**
+```bash
+# Download and run
+curl -fsSL https://raw.githubusercontent.com/bahyali/coicop-validation-system/main/run-docker.sh -o run-docker.sh
+chmod +x run-docker.sh
+./run-docker.sh up
+```
+
+**Windows (PowerShell):**
+```powershell
+# Download and run
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/bahyali/coicop-validation-system/main/run-docker.bat" -OutFile "run-docker.bat"
+.\run-docker.bat up
+```
+
+### Runner Script Commands
+
+| Command | Description |
+|---------|-------------|
+| `up` | Start the application (default) |
+| `down` | Stop the application |
+| `pull` | Pull latest images from Docker Hub |
+| `logs` | View application logs |
+| `restart` | Restart the application |
+| `status` | Show container status |
+
+### Using Docker Compose Directly
+
+```bash
+# Using the hub compose file
+docker compose -f docker-compose.hub.yml up -d
+
+# Or pull and run manually
+docker pull bahyali/coicop-validation-backend:latest
+docker pull bahyali/coicop-validation-frontend:latest
+docker compose -f docker-compose.hub.yml up -d
+```
+
+### Custom Ports
+
+```bash
+# Unix/macOS
+FRONTEND_PORT=8080 BACKEND_PORT=3000 ./run-docker.sh up
+
+# Windows
+set FRONTEND_PORT=8080 && set BACKEND_PORT=3000 && run-docker.bat up
+```
+
+### Access
+- **Frontend:** http://localhost (port 80)
+- **Backend API:** http://localhost:8000
+- **API Docs:** http://localhost:8000/docs
 
 ## Installation
 
@@ -145,17 +215,19 @@ cd frontend
 npm install
 ```
 
-### Using Docker
+### Using Docker (Build Locally)
 
-No additional setup required. Docker will handle all dependencies.
+Build images locally from source code. No Python/Node.js setup required.
 
 ```bash
-# Production
+# Production (builds and runs)
 docker compose up --build
 
 # Development (with hot reload)
 docker compose -f docker-compose.dev.yml up --build
 ```
+
+> **Note:** For pre-built images from Docker Hub, see [Quick Start with Docker Hub](#quick-start-with-docker-hub).
 
 ## Running the Application
 
