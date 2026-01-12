@@ -4,3 +4,4 @@ pydantic
 sqlmodel
 pandas
 python-multipart
+requests
