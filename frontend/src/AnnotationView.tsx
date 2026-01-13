@@ -4,7 +4,7 @@ import type { Item, Decision, Classification } from './api';
 import { ItemDisplay } from './components/ItemDisplay';
 import { FixPanel } from './components/FixPanel';
 import { AdminPanel } from './components/AdminPanel';
-import { Loader2, Settings } from 'lucide-react';
+import { Loader2, Settings, Timer, RotateCcw, Pause, Play } from 'lucide-react';
 
 export function AnnotationView() {
     const [currentItem, setCurrentItem] = useState<Item | null>(null);
@@ -19,6 +19,9 @@ export function AnnotationView() {
     const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
     const [classifications, setClassifications] = useState<Record<string, Classification | null>>({});
     const [itemLoadedAt, setItemLoadedAt] = useState<number>(Date.now());
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+    const [pausedTime, setPausedTime] = useState(0); // Accumulated time when paused
 
     const loadNext = useCallback(async () => {
         setLoading(true);
@@ -26,6 +29,8 @@ export function AnnotationView() {
             const item = await fetchNextItem(userId);
             setCurrentItem(item);
             setItemLoadedAt(Date.now()); // Track when item was loaded
+            setIsPaused(false); // Reset pause state
+            setPausedTime(0); // Reset accumulated paused time
         } catch (e) {
             console.error("Failed to load item", e);
         } finally {
@@ -40,6 +45,40 @@ export function AnnotationView() {
         }
     }, [loadNext, showNamePrompt, userId]);
 
+    // Timer update effect
+    useEffect(() => {
+        if (isPaused) return;
+        const interval = setInterval(() => {
+            setElapsedSeconds(pausedTime + Math.floor((Date.now() - itemLoadedAt) / 1000));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [itemLoadedAt, isPaused, pausedTime]);
+
+    const resetTimer = () => {
+        setItemLoadedAt(Date.now());
+        setElapsedSeconds(0);
+        setIsPaused(false);
+        setPausedTime(0);
+    };
+
+    const togglePause = () => {
+        if (isPaused) {
+            // Resuming: set new start time, keep accumulated pausedTime
+            setItemLoadedAt(Date.now());
+            setIsPaused(false);
+        } else {
+            // Pausing: save current elapsed time
+            setPausedTime(elapsedSeconds);
+            setIsPaused(true);
+        }
+    };
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
     const handleAction = async (action: 'accept' | 'fix' | 'escalate', codeOverride?: string) => {
         if (!currentItem || processing) return;
 
@@ -53,7 +92,8 @@ export function AnnotationView() {
         setIsFixPanelOpen(false);
 
         try {
-            const timeSpentMs = Date.now() - itemLoadedAt;
+            // Use elapsedSeconds which accounts for pauses
+            const timeSpentMs = elapsedSeconds * 1000;
             const decision: Decision = {
                 item_id: currentItem.id,
                 reviewer_id: userId,
@@ -213,6 +253,30 @@ export function AnnotationView() {
                             <Settings size={16} />
                             <span className="text-xs font-medium">Admin</span>
                         </button>
+                        <div className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg ${isPaused ? 'bg-slate-100 border-slate-300' : 'bg-amber-50 border-amber-200'}`}>
+                            <Timer size={16} className={isPaused ? 'text-slate-400' : 'text-amber-600'} />
+                            <span className={`font-bold min-w-[3rem] text-center ${isPaused ? 'text-slate-400' : elapsedSeconds >= 60 ? 'text-amber-600' : 'text-slate-700'}`}>
+                                {formatTime(elapsedSeconds)}
+                            </span>
+                            <button
+                                onClick={togglePause}
+                                className={`p-1 rounded transition-colors ${isPaused ? 'hover:bg-slate-200' : 'hover:bg-amber-100'}`}
+                                title={isPaused ? 'Resume Timer' : 'Pause Timer'}
+                            >
+                                {isPaused ? (
+                                    <Play size={14} className="text-green-600" />
+                                ) : (
+                                    <Pause size={14} className="text-amber-600" />
+                                )}
+                            </button>
+                            <button
+                                onClick={resetTimer}
+                                className={`p-1 rounded transition-colors ${isPaused ? 'hover:bg-slate-200' : 'hover:bg-amber-100'}`}
+                                title="Reset Timer"
+                            >
+                                <RotateCcw size={14} className={isPaused ? 'text-slate-400' : 'text-amber-600'} />
+                            </button>
+                        </div>
                         <span>User: <strong className="text-slate-700">{userId}</strong></span>
                         <button
                             onClick={handleChangeName}
