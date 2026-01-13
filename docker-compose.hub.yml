@@ -22,5 +22,14 @@ services:
       - backend
     restart: unless-stopped
 
+  dashboard:
+    image: radhyah/coicop-dashboard:latest
+    container_name: coicop-dashboard
+    ports:
+      - "${DASHBOARD_PORT:-7896}:7896"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   backend_data:
