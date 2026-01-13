@@ -166,3 +166,251 @@ async def get_action_breakdown(session: Session = Depends(get_session)):
     ]
 
     return breakdown
+
+
+@router.get("/dashboard/user-detailed-stats/{reviewer_id}")
+async def get_user_detailed_stats(reviewer_id: str, session: Session = Depends(get_session)):
+    """Get detailed statistics for a specific user with time-based breakdowns"""
+
+    now = datetime.utcnow()
+    today_start = datetime.combine(now.date(), datetime.min.time())
+    week_start = today_start - timedelta(days=now.weekday())
+    month_start = datetime.combine(now.date().replace(day=1), datetime.min.time())
+
+    # Total stats
+    total_count = session.exec(
+        select(func.count(Decision.id))
+        .where(Decision.reviewer_id == reviewer_id)
+    ).one()
+
+    total_time = session.exec(
+        select(func.sum(Decision.time_spent_ms))
+        .where(Decision.reviewer_id == reviewer_id)
+    ).one() or 0
+
+    # Today's stats
+    today_count = session.exec(
+        select(func.count(Decision.id))
+        .where(and_(
+            Decision.reviewer_id == reviewer_id,
+            Decision.timestamp >= today_start
+        ))
+    ).one()
+
+    today_time = session.exec(
+        select(func.sum(Decision.time_spent_ms))
+        .where(and_(
+            Decision.reviewer_id == reviewer_id,
+            Decision.timestamp >= today_start
+        ))
+    ).one() or 0
+
+    # This week's stats
+    week_count = session.exec(
+        select(func.count(Decision.id))
+        .where(and_(
+            Decision.reviewer_id == reviewer_id,
+            Decision.timestamp >= week_start
+        ))
+    ).one()
+
+    week_time = session.exec(
+        select(func.sum(Decision.time_spent_ms))
+        .where(and_(
+            Decision.reviewer_id == reviewer_id,
+            Decision.timestamp >= week_start
+        ))
+    ).one() or 0
+
+    # This month's stats
+    month_count = session.exec(
+        select(func.count(Decision.id))
+        .where(and_(
+            Decision.reviewer_id == reviewer_id,
+            Decision.timestamp >= month_start
+        ))
+    ).one()
+
+    month_time = session.exec(
+        select(func.sum(Decision.time_spent_ms))
+        .where(and_(
+            Decision.reviewer_id == reviewer_id,
+            Decision.timestamp >= month_start
+        ))
+    ).one() or 0
+
+    # Action breakdown for this user
+    actions = session.exec(
+        select(Decision.action, func.count(Decision.id).label('count'))
+        .where(Decision.reviewer_id == reviewer_id)
+        .group_by(Decision.action)
+    ).all()
+
+    action_breakdown = {action: count for action, count in actions}
+
+    # Agreement rate
+    accept_count = action_breakdown.get('accept', 0)
+    agreement_rate = (accept_count / total_count * 100) if total_count > 0 else 0
+
+    # Daily breakdown for last 30 days
+    thirty_days_ago = today_start - timedelta(days=30)
+    daily_stats = session.exec(
+        select(
+            func.date(Decision.timestamp).label('date'),
+            func.count(Decision.id).label('count'),
+            func.sum(Decision.time_spent_ms).label('time_ms')
+        )
+        .where(and_(
+            Decision.reviewer_id == reviewer_id,
+            Decision.timestamp >= thirty_days_ago
+        ))
+        .group_by(func.date(Decision.timestamp))
+        .order_by(func.date(Decision.timestamp))
+    ).all()
+
+    daily_breakdown = [
+        {
+            "date": str(date),
+            "count": count,
+            "time_minutes": round((time_ms or 0) / 60000, 1)
+        }
+        for date, count, time_ms in daily_stats
+    ]
+
+    # Weekly breakdown for last 12 weeks
+    weekly_stats = []
+    for i in range(12):
+        week_end = week_start - timedelta(weeks=i)
+        week_begin = week_end - timedelta(days=7)
+
+        week_data = session.exec(
+            select(
+                func.count(Decision.id).label('count'),
+                func.sum(Decision.time_spent_ms).label('time_ms')
+            )
+            .where(and_(
+                Decision.reviewer_id == reviewer_id,
+                Decision.timestamp >= week_begin,
+                Decision.timestamp < week_end
+            ))
+        ).one()
+
+        weekly_stats.append({
+            "week_start": str(week_begin.date()),
+            "week_end": str(week_end.date()),
+            "count": week_data[0] or 0,
+            "time_minutes": round((week_data[1] or 0) / 60000, 1)
+        })
+
+    weekly_stats.reverse()
+
+    return {
+        "reviewer_id": reviewer_id,
+        "total": {
+            "count": total_count,
+            "time_minutes": round(total_time / 60000, 1),
+            "avg_time_seconds": round(total_time / total_count / 1000, 2) if total_count > 0 else 0
+        },
+        "today": {
+            "count": today_count,
+            "time_minutes": round(today_time / 60000, 1),
+            "avg_time_seconds": round(today_time / today_count / 1000, 2) if today_count > 0 else 0
+        },
+        "this_week": {
+            "count": week_count,
+            "time_minutes": round(week_time / 60000, 1),
+            "avg_time_seconds": round(week_time / week_count / 1000, 2) if week_count > 0 else 0
+        },
+        "this_month": {
+            "count": month_count,
+            "time_minutes": round(month_time / 60000, 1),
+            "avg_time_seconds": round(month_time / month_count / 1000, 2) if month_count > 0 else 0
+        },
+        "agreement_rate": round(agreement_rate, 2),
+        "action_breakdown": action_breakdown,
+        "daily_breakdown": daily_breakdown,
+        "weekly_breakdown": weekly_stats
+    }
+
+
+@router.get("/dashboard/all-users-detailed-stats")
+async def get_all_users_detailed_stats(session: Session = Depends(get_session)):
+    """Get detailed statistics for all users with time-based breakdowns"""
+
+    now = datetime.utcnow()
+    today_start = datetime.combine(now.date(), datetime.min.time())
+    week_start = today_start - timedelta(days=now.weekday())
+    month_start = datetime.combine(now.date().replace(day=1), datetime.min.time())
+
+    # Get all unique reviewers
+    reviewers = session.exec(
+        select(Decision.reviewer_id).distinct()
+    ).all()
+
+    all_stats = []
+
+    for reviewer_id in reviewers:
+        # Total stats
+        total_count = session.exec(
+            select(func.count(Decision.id))
+            .where(Decision.reviewer_id == reviewer_id)
+        ).one()
+
+        total_time = session.exec(
+            select(func.sum(Decision.time_spent_ms))
+            .where(Decision.reviewer_id == reviewer_id)
+        ).one() or 0
+
+        # Today's stats
+        today_count = session.exec(
+            select(func.count(Decision.id))
+            .where(and_(
+                Decision.reviewer_id == reviewer_id,
+                Decision.timestamp >= today_start
+            ))
+        ).one()
+
+        # This week's stats
+        week_count = session.exec(
+            select(func.count(Decision.id))
+            .where(and_(
+                Decision.reviewer_id == reviewer_id,
+                Decision.timestamp >= week_start
+            ))
+        ).one()
+
+        # This month's stats
+        month_count = session.exec(
+            select(func.count(Decision.id))
+            .where(and_(
+                Decision.reviewer_id == reviewer_id,
+                Decision.timestamp >= month_start
+            ))
+        ).one()
+
+        # Agreement rate
+        accept_count = session.exec(
+            select(func.count(Decision.id))
+            .where(and_(
+                Decision.reviewer_id == reviewer_id,
+                Decision.action == "accept"
+            ))
+        ).one()
+
+        agreement_rate = (accept_count / total_count * 100) if total_count > 0 else 0
+
+        all_stats.append({
+            "reviewer_id": reviewer_id,
+            "total_count": total_count,
+            "today_count": today_count,
+            "week_count": week_count,
+            "month_count": month_count,
+            "total_time_minutes": round(total_time / 60000, 1),
+            "avg_time_seconds": round(total_time / total_count / 1000, 2) if total_count > 0 else 0,
+            "agreement_rate": round(agreement_rate, 2)
+        })
+
+    # Sort by total count
+    all_stats.sort(key=lambda x: x['total_count'], reverse=True)
+
+    return all_stats

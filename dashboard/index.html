@@ -49,6 +49,32 @@
             color: #64748b;
         }
 
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -282,11 +308,19 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>
-                <i data-lucide="bar-chart-3" style="width: 40px; height: 40px; color: #667eea;"></i>
-                لوحة التحكم - COICOP
-            </h1>
-            <p>إحصائيات شاملة لنظام التحقق والتصنيف</p>
+            <div class="header-top">
+                <div>
+                    <h1>
+                        <i data-lucide="bar-chart-3" style="width: 40px; height: 40px; color: #667eea;"></i>
+                        لوحة التحكم - COICOP
+                    </h1>
+                    <p>إحصائيات شاملة لنظام التحقق والتصنيف</p>
+                </div>
+                <a href="user_stats.html" class="nav-link">
+                    <i data-lucide="users" style="width: 20px; height: 20px;"></i>
+                    احصائيات المستخدمين
+                </a>
+            </div>
         </div>
 
         <div id="loading" class="loading">

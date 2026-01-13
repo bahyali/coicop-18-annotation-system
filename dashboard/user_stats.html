@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Stats - COICOP Dashboard</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 32px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #64748b;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .summary-card .label {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .users-table-container {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 32px;
+            animation: slideUp 0.6s ease-out;
+            overflow-x: auto;
+        }
+
+        .table-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .users-table th {
+            background: #f8fafc;
+            padding: 16px;
+            text-align: right;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        .users-table td {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+
+        .users-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .users-table tr {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .rank-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+
+        .rank-1 { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #1e293b; }
+        .rank-2 { background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%); color: #1e293b; }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32 0%, #e59866 100%); color: white; }
+        .rank-other { background: #e2e8f0; color: #64748b; }
+
+        .stat-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .badge-today { background: #dcfce7; color: #166534; }
+        .badge-week { background: #dbeafe; color: #1e40af; }
+        .badge-month { background: #fef3c7; color: #92400e; }
+        .badge-total { background: #f3e8ff; color: #7c3aed; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlideUp 0.3s ease-out;
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-close {
+            background: #f1f5f9;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #e2e8f0;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .detail-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .detail-stat-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .detail-stat-card .period {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .detail-stat-card .count {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .detail-stat-card .time {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .chart-section {
+            margin-top: 24px;
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 150px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .bar {
+            flex: 1;
+            background: linear-gradient(to top, #667eea, #764ba2);
+            border-radius: 4px 4px 0 0;
+            min-width: 8px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .bar:hover {
+            opacity: 0.8;
+        }
+
+        .bar-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .bar:hover .bar-tooltip {
+            opacity: 1;
+        }
+
+        .action-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .action-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .action-item .action-name {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .action-item .action-count {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .action-accept { color: #10b981; }
+        .action-fix { color: #f59e0b; }
+        .action-escalate { color: #ef4444; }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .spinner {
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .sort-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: #64748b;
+            transition: color 0.2s;
+        }
+
+        .sort-btn:hover {
+            color: #1e293b;
+        }
+
+        .sort-btn.active {
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .users-table th, .users-table td {
+                padding: 12px 8px;
+                font-size: 0.875rem;
+            }
+
+            .stat-badge {
+                padding: 4px 10px;
+                font-size: 0.75rem;
+            }
+
+            .action-breakdown {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <div>
+                    <h1>
+                        <i data-lucide="users" style="width: 40px; height: 40px; color: #667eea;"></i>
+                        احصائيات المستخدمين
+                    </h1>
+                    <p>تتبع أداء المستخدمين - يومي / اسبوعي / شهري / اجمالي</p>
+                </div>
+                <a href="index.html" class="nav-link">
+                    <i data-lucide="layout-dashboard" style="width: 20px; height: 20px;"></i>
+                    لوحة التحكم الرئيسية
+                </a>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p style="color: #64748b; font-size: 1.2rem;">جاري تحميل البيانات...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="stats-summary" id="statsSummary"></div>
+
+            <div class="users-table-container">
+                <div class="table-header">
+                    <i data-lucide="bar-chart-2" style="width: 28px; height: 28px; color: #667eea;"></i>
+                    جدول المستخدمين
+                </div>
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المستخدم</th>
+                            <th>
+                                اليوم
+                                <button class="sort-btn" data-sort="today_count" title="ترتيب حسب اليوم">
+                                    <i data-lucide="arrow-up-down" style="width: 16px; height: 16px;"></i>
+                                </button>
+                            </th>
+                            <th>
+                                الاسبوع
+                                <button class="sort-btn" data-sort="week_count" title="ترتيب حسب الاسبوع">
+                                    <i data-lucide="arrow-up-down" style="width: 16px; height: 16px;"></i>
+                                </button>
+                            </th>
+                            <th>
+                                الشهر
+                                <button class="sort-btn" data-sort="month_count" title="ترتيب حسب الشهر">
+                                    <i data-lucide="arrow-up-down" style="width: 16px; height: 16px;"></i>
+                                </button>
+                            </th>
+                            <th>
+                                الاجمالي
+                                <button class="sort-btn active" data-sort="total_count" title="ترتيب حسب الاجمالي">
+                                    <i data-lucide="arrow-up-down" style="width: 16px; height: 16px;"></i>
+                                </button>
+                            </th>
+                            <th>
+                                معدل التوافق
+                                <button class="sort-btn" data-sort="agreement_rate" title="ترتيب حسب التوافق">
+                                    <i data-lucide="arrow-up-down" style="width: 16px; height: 16px;"></i>
+                                </button>
+                            </th>
+                            <th>متوسط الوقت</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Detail Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i data-lucide="user" style="width: 28px; height: 28px; color: #667eea;"></i>
+                    <span id="modalUserName"></span>
+                </div>
+                <button class="modal-close" onclick="closeModal()">
+                    <i data-lucide="x" style="width: 24px; height: 24px; color: #64748b;"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="spinner" style="margin: 40px auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = `http://${window.location.hostname}:8000/api`;
+        let usersData = [];
+        let currentSort = 'total_count';
+        let sortDirection = 'desc';
+
+        async function fetchAllUsersStats() {
+            try {
+                const response = await fetch(`${API_URL}/dashboard/all-users-detailed-stats`);
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching user stats:', error);
+                return null;
+            }
+        }
+
+        async function fetchUserDetailedStats(reviewerId) {
+            try {
+                const response = await fetch(`${API_URL}/dashboard/user-detailed-stats/${encodeURIComponent(reviewerId)}`);
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching user detailed stats:', error);
+                return null;
+            }
+        }
+
+        function renderSummary(users) {
+            const totalUsers = users.length;
+            const totalToday = users.reduce((sum, u) => sum + u.today_count, 0);
+            const totalWeek = users.reduce((sum, u) => sum + u.week_count, 0);
+            const totalMonth = users.reduce((sum, u) => sum + u.month_count, 0);
+            const totalAll = users.reduce((sum, u) => sum + u.total_count, 0);
+
+            document.getElementById('statsSummary').innerHTML = `
+                <div class="summary-card">
+                    <div class="value">${totalUsers}</div>
+                    <div class="label">عدد المستخدمين</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value" style="color: #10b981;">${totalToday.toLocaleString()}</div>
+                    <div class="label">قرارات اليوم</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value" style="color: #3b82f6;">${totalWeek.toLocaleString()}</div>
+                    <div class="label">قرارات الاسبوع</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value" style="color: #f59e0b;">${totalMonth.toLocaleString()}</div>
+                    <div class="label">قرارات الشهر</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value" style="color: #8b5cf6;">${totalAll.toLocaleString()}</div>
+                    <div class="label">اجمالي القرارات</div>
+                </div>
+            `;
+        }
+
+        function sortUsers(users, sortKey, direction) {
+            return [...users].sort((a, b) => {
+                const aVal = a[sortKey];
+                const bVal = b[sortKey];
+                return direction === 'desc' ? bVal - aVal : aVal - bVal;
+            });
+        }
+
+        function renderUsersTable(users) {
+            const sortedUsers = sortUsers(users, currentSort, sortDirection);
+            const tbody = document.getElementById('usersTableBody');
+
+            tbody.innerHTML = sortedUsers.map((user, index) => {
+                const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-other';
+                return `
+                    <tr onclick="openUserModal('${user.reviewer_id}')">
+                        <td>
+                            <div class="rank-badge ${rankClass}">${index + 1}</div>
+                        </td>
+                        <td>
+                            <div class="user-name">
+                                <i data-lucide="user" style="width: 20px; height: 20px; color: #64748b;"></i>
+                                ${user.reviewer_id}
+                            </div>
+                        </td>
+                        <td><span class="stat-badge badge-today">${user.today_count}</span></td>
+                        <td><span class="stat-badge badge-week">${user.week_count}</span></td>
+                        <td><span class="stat-badge badge-month">${user.month_count}</span></td>
+                        <td><span class="stat-badge badge-total">${user.total_count.toLocaleString()}</span></td>
+                        <td>${user.agreement_rate}%</td>
+                        <td>${user.avg_time_seconds}ث</td>
+                    </tr>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function setupSortButtons() {
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const sortKey = btn.dataset.sort;
+
+                    if (currentSort === sortKey) {
+                        sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+                    } else {
+                        currentSort = sortKey;
+                        sortDirection = 'desc';
+                    }
+
+                    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    renderUsersTable(usersData);
+                });
+            });
+        }
+
+        async function openUserModal(reviewerId) {
+            document.getElementById('modalOverlay').classList.add('active');
+            document.getElementById('modalUserName').textContent = reviewerId;
+            document.getElementById('modalBody').innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner"></div>
+                    <p style="color: #64748b;">جاري تحميل البيانات...</p>
+                </div>
+            `;
+
+            const data = await fetchUserDetailedStats(reviewerId);
+
+            if (data) {
+                renderUserModal(data);
+            } else {
+                document.getElementById('modalBody').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                        فشل تحميل البيانات
+                    </div>
+                `;
+            }
+        }
+
+        function renderUserModal(data) {
+            const maxDaily = Math.max(...data.daily_breakdown.map(d => d.count), 1);
+            const maxWeekly = Math.max(...data.weekly_breakdown.map(w => w.count), 1);
+
+            const dailyBars = data.daily_breakdown.map(d => {
+                const height = (d.count / maxDaily) * 100;
+                return `
+                    <div class="bar" style="height: ${Math.max(height, 2)}%;">
+                        <div class="bar-tooltip">${d.date}: ${d.count}</div>
+                    </div>
+                `;
+            }).join('');
+
+            const weeklyBars = data.weekly_breakdown.map(w => {
+                const height = (w.count / maxWeekly) * 100;
+                return `
+                    <div class="bar" style="height: ${Math.max(height, 2)}%;">
+                        <div class="bar-tooltip">${w.week_start}: ${w.count}</div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('modalBody').innerHTML = `
+                <div class="detail-stats-grid">
+                    <div class="detail-stat-card">
+                        <div class="period">اليوم</div>
+                        <div class="count" style="color: #10b981;">${data.today.count}</div>
+                        <div class="time">${data.today.time_minutes} دقيقة</div>
+                    </div>
+                    <div class="detail-stat-card">
+                        <div class="period">هذا الاسبوع</div>
+                        <div class="count" style="color: #3b82f6;">${data.this_week.count}</div>
+                        <div class="time">${data.this_week.time_minutes} دقيقة</div>
+                    </div>
+                    <div class="detail-stat-card">
+                        <div class="period">هذا الشهر</div>
+                        <div class="count" style="color: #f59e0b;">${data.this_month.count}</div>
+                        <div class="time">${data.this_month.time_minutes} دقيقة</div>
+                    </div>
+                    <div class="detail-stat-card">
+                        <div class="period">الاجمالي</div>
+                        <div class="count" style="color: #8b5cf6;">${data.total.count.toLocaleString()}</div>
+                        <div class="time">${data.total.time_minutes} دقيقة</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                    <div class="detail-stat-card">
+                        <div class="period">معدل التوافق</div>
+                        <div class="count" style="color: #667eea;">${data.agreement_rate}%</div>
+                    </div>
+                    <div class="detail-stat-card">
+                        <div class="period">متوسط الوقت</div>
+                        <div class="count" style="color: #ec4899;">${data.total.avg_time_seconds}ث</div>
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <div class="chart-title">
+                        <i data-lucide="activity" style="width: 20px; height: 20px; color: #667eea;"></i>
+                        النشاط اليومي (آخر 30 يوم)
+                    </div>
+                    <div class="bar-chart">
+                        ${dailyBars || '<div style="color: #64748b; width: 100%; text-align: center;">لا توجد بيانات</div>'}
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <div class="chart-title">
+                        <i data-lucide="calendar" style="width: 20px; height: 20px; color: #667eea;"></i>
+                        النشاط الاسبوعي (آخر 12 اسبوع)
+                    </div>
+                    <div class="bar-chart">
+                        ${weeklyBars || '<div style="color: #64748b; width: 100%; text-align: center;">لا توجد بيانات</div>'}
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <div class="chart-title">
+                        <i data-lucide="pie-chart" style="width: 20px; height: 20px; color: #667eea;"></i>
+                        توزيع الاجراءات
+                    </div>
+                    <div class="action-breakdown">
+                        <div class="action-item">
+                            <div class="action-name">قبول</div>
+                            <div class="action-count action-accept">${data.action_breakdown.accept || 0}</div>
+                        </div>
+                        <div class="action-item">
+                            <div class="action-name">تصحيح</div>
+                            <div class="action-count action-fix">${data.action_breakdown.fix || 0}</div>
+                        </div>
+                        <div class="action-item">
+                            <div class="action-name">تحويل</div>
+                            <div class="action-count action-escalate">${data.action_breakdown.escalate || 0}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        // Close modal on overlay click
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('modalOverlay')) {
+                closeModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        async function init() {
+            usersData = await fetchAllUsersStats();
+
+            if (usersData && usersData.length > 0) {
+                renderSummary(usersData);
+                renderUsersTable(usersData);
+                setupSortButtons();
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                lucide.createIcons();
+            } else {
+                document.getElementById('loading').innerHTML = `
+                    <i data-lucide="alert-circle" style="width: 48px; height: 48px; color: #ef4444; margin: 0 auto 16px; display: block;"></i>
+                    <p style="color: #ef4444; font-size: 1.2rem;">فشل تحميل البيانات. يرجى التحقق من الاتصال بالخادم.</p>
+                `;
+                lucide.createIcons();
+            }
+        }
+
+        init();
+        setInterval(init, 60000); // Refresh every minute
+    </script>
+</body>
+</html>
