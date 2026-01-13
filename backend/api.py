@@ -27,9 +27,9 @@ def submit_decision(decision: Decision, session: Session = Depends(get_session))
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/stats")
-def get_stats(session: Session = Depends(get_session)):
-    """Get detailed statistics about items"""
-    return services.get_stats(session)
+def get_stats(user_id: str = None, session: Session = Depends(get_session)):
+    """Get detailed statistics about items, optionally filtered by user_id"""
+    return services.get_stats(session, user_id)
 
 
 @router.post("/unlock/{item_id}")

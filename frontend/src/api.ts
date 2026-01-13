@@ -89,8 +89,10 @@ export interface Stats {
     escalated_items: Array<{id: string; description: string}>;
 }
 
-export const fetchStats = async (): Promise<Stats> => {
-    const response = await api.get<Stats>('/stats');
+export const fetchStats = async (userId?: string): Promise<Stats> => {
+    const response = await api.get<Stats>('/stats', {
+        params: userId ? { user_id: userId } : undefined
+    });
     return response.data;
 };
 

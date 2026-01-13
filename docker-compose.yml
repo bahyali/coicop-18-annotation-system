@@ -21,3 +21,13 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "${DASHBOARD_PORT:-7896}:7896"
+    depends_on:
+      - backend
+    restart: unless-stopped

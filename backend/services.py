@@ -217,31 +217,95 @@ def search_classifications(session: Session, query: str = "", limit: int = 10) -
     return session.exec(statement).all()
 
 
-def get_stats(session: Session) -> dict:
-    """Get statistics about items"""
-    items = session.exec(select(Item)).all()
+def get_stats(session: Session, user_id: str = None) -> dict:
+    """Get statistics about items, optionally filtered by user_id"""
 
-    stats = {
-        "total": len(items),
-        "pending": len([i for i in items if i.status == "pending"]),
-        "locked": len([i for i in items if i.status == "locked"]),
-        "completed": len([i for i in items if i.status == "completed"]),
-        "escalated": len([i for i in items if i.status == "escalated"]),
-    }
+    if user_id:
+        # Get user-specific stats
+        # Get items locked by this user
+        locked_items_query = select(Item).where(
+            Item.status == "locked",
+            Item.locked_by == user_id
+        )
+        locked_items = session.exec(locked_items_query).all()
 
-    # Get locked items details
-    locked_items = [
-        {"id": i.id, "description": i.description[:50], "locked_by": i.locked_by, "locked_at": str(i.locked_at)}
-        for i in items if i.status == "locked"
-    ]
-    stats["locked_items"] = locked_items
+        # Get completed items by this user (via decisions)
+        completed_decisions = session.exec(
+            select(Decision.item_id).where(Decision.reviewer_id == user_id)
+        ).all()
+        completed_item_ids = set(completed_decisions)
 
-    # Get escalated items details
-    escalated_items = [
-        {"id": i.id, "description": i.description[:50]}
-        for i in items if i.status == "escalated"
-    ]
-    stats["escalated_items"] = escalated_items
+        completed_items_query = select(Item).where(
+            Item.status == "completed",
+            Item.id.in_(completed_item_ids)
+        )
+        completed_items = session.exec(completed_items_query).all() if completed_item_ids else []
+
+        # Get escalated items by this user
+        escalated_decisions = session.exec(
+            select(Decision.item_id).where(
+                Decision.reviewer_id == user_id,
+                Decision.action == "escalate"
+            )
+        ).all()
+        escalated_item_ids = set(escalated_decisions)
+
+        escalated_items_query = select(Item).where(
+            Item.status == "escalated",
+            Item.id.in_(escalated_item_ids)
+        )
+        escalated_items = session.exec(escalated_items_query).all() if escalated_item_ids else []
+
+        # Total items available for this user (pending + their locked ones)
+        total = len(locked_items) + len(completed_items) + len(escalated_items)
+
+        stats = {
+            "total": total,
+            "pending": 0,  # User doesn't see pending items of others
+            "locked": len(locked_items),
+            "completed": len(completed_items),
+            "escalated": len(escalated_items),
+        }
+
+        # Get locked items details
+        locked_items_data = [
+            {"id": i.id, "description": i.description[:50], "locked_by": i.locked_by, "locked_at": str(i.locked_at)}
+            for i in locked_items
+        ]
+        stats["locked_items"] = locked_items_data
+
+        # Get escalated items details
+        escalated_items_data = [
+            {"id": i.id, "description": i.description[:50]}
+            for i in escalated_items
+        ]
+        stats["escalated_items"] = escalated_items_data
+
+    else:
+        # Admin view - get all stats
+        items = session.exec(select(Item)).all()
+
+        stats = {
+            "total": len(items),
+            "pending": len([i for i in items if i.status == "pending"]),
+            "locked": len([i for i in items if i.status == "locked"]),
+            "completed": len([i for i in items if i.status == "completed"]),
+            "escalated": len([i for i in items if i.status == "escalated"]),
+        }
+
+        # Get locked items details
+        locked_items = [
+            {"id": i.id, "description": i.description[:50], "locked_by": i.locked_by, "locked_at": str(i.locked_at)}
+            for i in items if i.status == "locked"
+        ]
+        stats["locked_items"] = locked_items
+
+        # Get escalated items details
+        escalated_items = [
+            {"id": i.id, "description": i.description[:50]}
+            for i in items if i.status == "escalated"
+        ]
+        stats["escalated_items"] = escalated_items
 
     return stats
 
