@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COICOP Dashboard - لوحة التحكم</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 32px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #64748b;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 8px 0;
+        }
+
+        .stat-subtitle {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 1s ease-out;
+            border-radius: 4px;
+        }
+
+        .leaderboard {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 30px;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .leaderboard-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            background: #f8fafc;
+            transition: all 0.3s;
+            border: 1px solid #e2e8f0;
+        }
+
+        .leaderboard-item:hover {
+            background: #f1f5f9;
+            transform: translateX(-5px);
+        }
+
+        .rank {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-left: 16px;
+        }
+
+        .rank-1 { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #1e293b; }
+        .rank-2 { background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%); color: #1e293b; }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32 0%, #e59866 100%); color: white; }
+        .rank-other { background: #e2e8f0; color: #64748b; }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .user-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 30px;
+            animation: slideUp 0.7s ease-out;
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .spinner {
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .user-stats {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i data-lucide="bar-chart-3" style="width: 40px; height: 40px; color: #667eea;"></i>
+                لوحة التحكم - COICOP
+            </h1>
+            <p>إحصائيات شاملة لنظام التحقق والتصنيف</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p style="color: #64748b; font-size: 1.2rem;">جاري تحميل البيانات...</p>
+        </div>
+
+        <div id="dashboard" style="display: none;">
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="leaderboard">
+                <div class="leaderboard-header">
+                    <i data-lucide="trophy" style="width: 28px; height: 28px; color: #ffd700;"></i>
+                    المتصدرون
+                </div>
+                <div id="leaderboard"></div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i data-lucide="pie-chart" style="width: 28px; height: 28px; color: #667eea;"></i>
+                    توزيع الإجراءات
+                </div>
+                <div id="actionBreakdown"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = `http://${window.location.hostname}:8000/api`;
+
+        const STAT_CONFIGS = [
+            { key: 'total_items', title: 'إجمالي البيانات', icon: 'database', color: '#3b82f6', valueKey: 'total_items', subtitle: 'إجمالي العناصر' },
+            { key: 'completed', title: 'مكتمل', icon: 'check-circle', color: '#10b981', valueKey: 'completed', subtitleFn: (s) => `${s.completion_percentage.toFixed(1)}% من الإجمالي`, progress: 'completion_percentage' },
+            { key: 'remaining', title: 'متبقي', icon: 'clock', color: '#f59e0b', valueKey: 'remaining', subtitleFn: (s) => `${s.pending} قيد الانتظار، ${s.escalated} محول` },
+            { key: 'agreement_rate', title: 'معدل التوافق', icon: 'target', color: '#8b5cf6', valueFn: (s) => `${s.agreement_rate}%`, subtitle: 'توافق مع اختيار الموديل', progress: 'agreement_rate' },
+            { key: 'avg_time', title: 'متوسط الوقت', icon: 'zap', color: '#ec4899', valueFn: (s) => `${s.avg_time_seconds.toFixed(1)}ث`, subtitle: 'لكل عنصر' },
+            { key: 'days_active', title: 'أيام النشاط', icon: 'calendar', color: '#06b6d4', valueKey: 'days_active', subtitleFn: (s) => `${s.hours_active.toFixed(1)} ساعة إجمالي` },
+            { key: 'estimated', title: 'الوقت المتوقع', icon: 'trending-up', color: '#84cc16', valueFn: (s) => `${s.estimated_days_to_complete.toFixed(1)}`, subtitle: 'يوم للانتهاء' },
+            { key: 'total_decisions', title: 'إجمالي القرارات', icon: 'activity', color: '#f43f5e', valueKey: 'total_decisions', subtitle: 'قرار محقق' }
+        ];
+
+        async function fetchData() {
+            try {
+                const [stats, userStats, actions] = await Promise.all([
+                    fetch(`${API_URL}/dashboard/stats`).then(r => r.json()),
+                    fetch(`${API_URL}/dashboard/user-stats`).then(r => r.json()),
+                    fetch(`${API_URL}/dashboard/action-breakdown`).then(r => r.json())
+                ]);
+                return { stats, userStats, actions };
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return null;
+            }
+        }
+
+        function renderStats(stats) {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = STAT_CONFIGS.map(config => {
+                const value = config.valueFn ? config.valueFn(stats) : stats[config.valueKey].toLocaleString();
+                const subtitle = config.subtitleFn ? config.subtitleFn(stats) : config.subtitle;
+                const progressValue = config.progress ? stats[config.progress] : null;
+
+                return `
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">${config.title}</div>
+                            <div class="stat-icon" style="background: ${config.color}20;">
+                                <i data-lucide="${config.icon}" style="width: 24px; height: 24px; color: ${config.color};"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">${value}</div>
+                        <div class="stat-subtitle">${subtitle}</div>
+                        ${progressValue !== null ? `
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progressValue}%; background: ${config.color};"></div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function renderLeaderboard(userStats) {
+            const leaderboard = document.getElementById('leaderboard');
+            leaderboard.innerHTML = userStats.slice(0, 10).map((user, index) => {
+                const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-other';
+                return `
+                    <div class="leaderboard-item">
+                        <div class="rank ${rankClass}">${index + 1}</div>
+                        <div class="user-info">
+                            <div class="user-name">${user.reviewer_id}</div>
+                            <div class="user-stats">
+                                <span><span class="badge badge-success">${user.total_count}</span> إجمالي</span>
+                                <span><span class="badge badge-info">${user.today_count}</span> اليوم</span>
+                                <span><span class="badge badge-warning">${user.agreement_rate}%</span> توافق</span>
+                                <span style="display: flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="zap" style="width: 14px; height: 14px;"></i>
+                                    ${user.avg_time_seconds.toFixed(1)}ث
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function renderActionBreakdown(actions) {
+            const breakdown = document.getElementById('actionBreakdown');
+            const total = actions.reduce((sum, a) => sum + a.count, 0);
+            const actionConfigs = {
+                'accept': { label: 'قبول', color: '#10b981', icon: 'check-circle' },
+                'fix': { label: 'تصحيح', color: '#f59e0b', icon: 'edit-3' },
+                'escalate': { label: 'تحويل', color: '#ef4444', icon: 'alert-triangle' }
+            };
+
+            breakdown.innerHTML = `
+                <div style="display: grid; gap: 16px;">
+                    ${actions.map(action => {
+                        const config = actionConfigs[action.action] || { label: action.action, color: '#64748b', icon: 'circle' };
+                        const percentage = ((action.count / total) * 100).toFixed(1);
+                        return `
+                            <div style="padding: 16px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <i data-lucide="${config.icon}" style="width: 24px; height: 24px; color: ${config.color};"></i>
+                                        <div>
+                                            <div style="font-weight: 600; color: #1e293b; font-size: 1.1rem;">${config.label}</div>
+                                            <div style="color: #64748b; font-size: 0.875rem;">${action.count.toLocaleString()} عملية</div>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 1.5rem; font-weight: 700; color: ${config.color};">${percentage}%</div>
+                                </div>
+                                <div class="progress-bar" style="height: 12px;">
+                                    <div class="progress-fill" style="width: ${percentage}%; background: ${config.color};"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function init() {
+            const data = await fetchData();
+            if (data) {
+                renderStats(data.stats);
+                renderLeaderboard(data.userStats);
+                renderActionBreakdown(data.actions);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            } else {
+                document.getElementById('loading').innerHTML = `
+                    <i data-lucide="alert-circle" style="width: 48px; height: 48px; color: #ef4444; margin: 0 auto 16px; display: block;"></i>
+                    <p style="color: #ef4444; font-size: 1.2rem;">فشل تحميل البيانات. يرجى التحقق من الاتصال بالخادم.</p>
+                `;
+                lucide.createIcons();
+            }
+        }
+
+        init();
+        setInterval(init, 30000);
+    </script>
+</body>
+</html>

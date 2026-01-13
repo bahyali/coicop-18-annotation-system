@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { fetchStats, unlockItem, unlockAllItems, requeueEscalated, resetStaleLocks } from '../api';
+import { fetchStats } from '../api';
 import type { Stats } from '../api';
-import { Lock, Unlock, RefreshCw, AlertTriangle, CheckCircle, Clock, Users } from 'lucide-react';
+import { Lock, RefreshCw, AlertTriangle, CheckCircle, Users } from 'lucide-react';
 
 interface AdminPanelProps {
     isOpen: boolean;
     onClose: () => void;
+    userId: string;
 }
 
-export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
+export function AdminPanel({ isOpen, onClose, userId }: AdminPanelProps) {
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
@@ -16,7 +17,7 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     const loadStats = async () => {
         setLoading(true);
         try {
-            const data = await fetchStats();
+            const data = await fetchStats(userId);
             setStats(data);
         } catch (error) {
             console.error('Failed to load stats', error);
@@ -31,46 +32,6 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
         }
     }, [isOpen]);
 
-    const handleUnlockItem = async (itemId: string) => {
-        try {
-            await unlockItem(itemId);
-            setMessage(`Item ${itemId} unlocked`);
-            loadStats();
-        } catch (error) {
-            setMessage('Failed to unlock item');
-        }
-    };
-
-    const handleUnlockAll = async () => {
-        try {
-            const result = await unlockAllItems();
-            setMessage(result.message);
-            loadStats();
-        } catch (error) {
-            setMessage('Failed to unlock items');
-        }
-    };
-
-    const handleRequeueEscalated = async () => {
-        try {
-            const result = await requeueEscalated();
-            setMessage(result.message);
-            loadStats();
-        } catch (error) {
-            setMessage('Failed to requeue escalated items');
-        }
-    };
-
-    const handleResetStaleLocks = async () => {
-        try {
-            const result = await resetStaleLocks(30);
-            setMessage(result.message);
-            loadStats();
-        } catch (error) {
-            setMessage('Failed to reset stale locks');
-        }
-    };
-
     if (!isOpen) return null;
 
     return (
@@ -80,7 +41,7 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                 <div className="bg-slate-800 text-white p-4 flex justify-between items-center">
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <Users size={24} />
-                        Admin Panel - Item Management
+                        تقدمي - My Progress
                     </h2>
                     <button
                         onClick={onClose}
@@ -131,34 +92,11 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                             {/* Action Buttons */}
                             <div className="flex gap-3 mb-6">
                                 <button
-                                    onClick={handleUnlockAll}
-                                    disabled={stats.locked === 0}
-                                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <Unlock size={18} />
-                                    Unlock All ({stats.locked})
-                                </button>
-                                <button
-                                    onClick={handleRequeueEscalated}
-                                    disabled={stats.escalated === 0}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <RefreshCw size={18} />
-                                    Requeue Escalated ({stats.escalated})
-                                </button>
-                                <button
-                                    onClick={handleResetStaleLocks}
-                                    className="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600"
-                                >
-                                    <Clock size={18} />
-                                    Reset Stale Locks (30min+)
-                                </button>
-                                <button
                                     onClick={loadStats}
                                     className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 ml-auto"
                                 >
                                     <RefreshCw size={18} />
-                                    Refresh
+                                    تحديث - Refresh
                                 </button>
                             </div>
 
@@ -175,9 +113,7 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                                 <tr>
                                                     <th className="text-left p-3">ID</th>
                                                     <th className="text-left p-3">Description</th>
-                                                    <th className="text-left p-3">Locked By</th>
                                                     <th className="text-left p-3">Locked At</th>
-                                                    <th className="text-center p-3">Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -185,16 +121,7 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                                     <tr key={item.id} className="border-t border-orange-200">
                                                         <td className="p-3 font-mono text-xs">{item.id}</td>
                                                         <td className="p-3">{item.description}</td>
-                                                        <td className="p-3 text-orange-700">{item.locked_by}</td>
                                                         <td className="p-3 text-xs text-slate-500">{item.locked_at}</td>
-                                                        <td className="p-3 text-center">
-                                                            <button
-                                                                onClick={() => handleUnlockItem(item.id)}
-                                                                className="px-3 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600"
-                                                            >
-                                                                Unlock
-                                                            </button>
-                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>

@@ -242,6 +242,7 @@ export function AnnotationView() {
                     setIsAdminPanelOpen(false);
                     loadNext(); // Reload after closing admin panel
                 }}
+                userId={userId}
             />
 
         </div>

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import create_db_and_tables, get_session
 from services import load_initial_data, load_coicop_data
 from api import router
+from dashboard_api import router as dashboard_router
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
@@ -28,6 +29,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")
 
 @app.get("/")
 async def root():
