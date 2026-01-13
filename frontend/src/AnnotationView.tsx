@@ -12,17 +12,20 @@ export function AnnotationView() {
     const [userId, setUserId] = useState(() => {
         return localStorage.getItem('reviewer_name') || '';
     });
+    const [nameInput, setNameInput] = useState(''); // Separate state for input field
     const [showNamePrompt, setShowNamePrompt] = useState(!localStorage.getItem('reviewer_name'));
     const [processing, setProcessing] = useState(false);
     const [isFixPanelOpen, setIsFixPanelOpen] = useState(false);
     const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
     const [classifications, setClassifications] = useState<Record<string, Classification | null>>({});
+    const [itemLoadedAt, setItemLoadedAt] = useState<number>(Date.now());
 
     const loadNext = useCallback(async () => {
         setLoading(true);
         try {
             const item = await fetchNextItem(userId);
             setCurrentItem(item);
+            setItemLoadedAt(Date.now()); // Track when item was loaded
         } catch (e) {
             console.error("Failed to load item", e);
         } finally {
@@ -31,8 +34,11 @@ export function AnnotationView() {
     }, [userId]);
 
     useEffect(() => {
-        loadNext();
-    }, [loadNext]);
+        // Only load items after user has submitted their name
+        if (!showNamePrompt && userId) {
+            loadNext();
+        }
+    }, [loadNext, showNamePrompt, userId]);
 
     const handleAction = async (action: 'accept' | 'fix' | 'escalate', codeOverride?: string) => {
         if (!currentItem || processing) return;
@@ -47,12 +53,13 @@ export function AnnotationView() {
         setIsFixPanelOpen(false);
 
         try {
+            const timeSpentMs = Date.now() - itemLoadedAt;
             const decision: Decision = {
                 item_id: currentItem.id,
                 reviewer_id: userId,
                 action,
                 final_code: codeOverride || (action === 'accept' ? (currentItem.model_code || currentItem.existing_code || "") : ""),
-                time_spent_ms: 0, // TODO: Track time
+                time_spent_ms: timeSpentMs,
             };
 
             await submitDecision(decision);
@@ -131,14 +138,17 @@ export function AnnotationView() {
 
     const handleNameSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (userId.trim()) {
-            localStorage.setItem('reviewer_name', userId.trim());
+        if (nameInput.trim()) {
+            const trimmedName = nameInput.trim();
+            localStorage.setItem('reviewer_name', trimmedName);
+            setUserId(trimmedName);
             setShowNamePrompt(false);
         }
     };
 
     const handleChangeName = () => {
         localStorage.removeItem('reviewer_name');
+        setNameInput('');
         setShowNamePrompt(true);
     };
 
@@ -152,15 +162,15 @@ export function AnnotationView() {
                     </label>
                     <input
                         type="text"
-                        value={userId}
-                        onChange={(e) => setUserId(e.target.value)}
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
                         placeholder="e.g. Ahmed, Sara, Mohammed..."
                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-4"
                         autoFocus
                     />
                     <button
                         type="submit"
-                        disabled={!userId.trim()}
+                        disabled={!nameInput.trim()}
                         className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Start Reviewing
