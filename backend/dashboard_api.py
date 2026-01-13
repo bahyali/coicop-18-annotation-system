@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select, func, and_
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 from models import Item, Decision, User
 from database import get_session
+import pandas as pd
+from io import BytesIO
 
 router = APIRouter()
 
@@ -414,3 +417,145 @@ async def get_all_users_detailed_stats(session: Session = Depends(get_session)):
     all_stats.sort(key=lambda x: x['total_count'], reverse=True)
 
     return all_stats
+
+
+@router.get("/dashboard/export/daily-report")
+async def export_daily_report(
+    date: Optional[str] = Query(None, description="Date in YYYY-MM-DD format, defaults to today"),
+    session: Session = Depends(get_session)
+):
+    """Export daily report as Excel file"""
+
+    # Parse date or use today
+    if date:
+        try:
+            report_date = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            report_date = datetime.utcnow().date()
+    else:
+        report_date = datetime.utcnow().date()
+
+    day_start = datetime.combine(report_date, datetime.min.time())
+    day_end = day_start + timedelta(days=1)
+
+    # Get all decisions for the day
+    decisions = session.exec(
+        select(Decision)
+        .where(and_(
+            Decision.timestamp >= day_start,
+            Decision.timestamp < day_end
+        ))
+        .order_by(Decision.timestamp)
+    ).all()
+
+    # Create Excel workbook with multiple sheets
+    output = BytesIO()
+
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Sheet 1: Summary
+        summary_data = {
+            'Metric': [
+                'Report Date',
+                'Total Decisions',
+                'Accept Count',
+                'Fix Count',
+                'Escalate Count',
+                'Total Time (minutes)',
+                'Average Time (seconds)',
+                'Unique Reviewers'
+            ],
+            'Value': [
+                str(report_date),
+                len(decisions),
+                len([d for d in decisions if d.action == 'accept']),
+                len([d for d in decisions if d.action == 'fix']),
+                len([d for d in decisions if d.action == 'escalate']),
+                round(sum(d.time_spent_ms for d in decisions) / 60000, 1),
+                round(sum(d.time_spent_ms for d in decisions) / len(decisions) / 1000, 2) if decisions else 0,
+                len(set(d.reviewer_id for d in decisions))
+            ]
+        }
+        df_summary = pd.DataFrame(summary_data)
+        df_summary.to_excel(writer, sheet_name='Summary', index=False)
+
+        # Sheet 2: User Stats
+        user_stats = {}
+        for d in decisions:
+            if d.reviewer_id not in user_stats:
+                user_stats[d.reviewer_id] = {
+                    'reviewer_id': d.reviewer_id,
+                    'total_count': 0,
+                    'accept_count': 0,
+                    'fix_count': 0,
+                    'escalate_count': 0,
+                    'total_time_ms': 0
+                }
+            user_stats[d.reviewer_id]['total_count'] += 1
+            user_stats[d.reviewer_id][f'{d.action}_count'] += 1
+            user_stats[d.reviewer_id]['total_time_ms'] += d.time_spent_ms
+
+        user_data = []
+        for stats in user_stats.values():
+            user_data.append({
+                'Reviewer': stats['reviewer_id'],
+                'Total Decisions': stats['total_count'],
+                'Accepts': stats['accept_count'],
+                'Fixes': stats['fix_count'],
+                'Escalates': stats['escalate_count'],
+                'Total Time (min)': round(stats['total_time_ms'] / 60000, 1),
+                'Avg Time (sec)': round(stats['total_time_ms'] / stats['total_count'] / 1000, 2) if stats['total_count'] > 0 else 0,
+                'Agreement Rate (%)': round(stats['accept_count'] / stats['total_count'] * 100, 1) if stats['total_count'] > 0 else 0
+            })
+
+        df_users = pd.DataFrame(user_data)
+        if not df_users.empty:
+            df_users = df_users.sort_values('Total Decisions', ascending=False)
+        df_users.to_excel(writer, sheet_name='User Stats', index=False)
+
+        # Sheet 3: Detailed Decisions
+        decision_data = []
+        for d in decisions:
+            decision_data.append({
+                'Timestamp': d.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                'Reviewer': d.reviewer_id,
+                'Item ID': d.item_id,
+                'Action': d.action,
+                'Final Code': d.final_code,
+                'Time Spent (sec)': round(d.time_spent_ms / 1000, 1),
+                'Escalation Reason': d.escalation_reason or ''
+            })
+
+        df_decisions = pd.DataFrame(decision_data)
+        df_decisions.to_excel(writer, sheet_name='Detailed Decisions', index=False)
+
+        # Sheet 4: Hourly Breakdown
+        hourly_stats = {}
+        for d in decisions:
+            hour = d.timestamp.hour
+            if hour not in hourly_stats:
+                hourly_stats[hour] = {'count': 0, 'time_ms': 0}
+            hourly_stats[hour]['count'] += 1
+            hourly_stats[hour]['time_ms'] += d.time_spent_ms
+
+        hourly_data = []
+        for hour in range(24):
+            stats = hourly_stats.get(hour, {'count': 0, 'time_ms': 0})
+            hourly_data.append({
+                'Hour': f'{hour:02d}:00',
+                'Decisions': stats['count'],
+                'Total Time (min)': round(stats['time_ms'] / 60000, 1),
+                'Avg Time (sec)': round(stats['time_ms'] / stats['count'] / 1000, 2) if stats['count'] > 0 else 0
+            })
+
+        df_hourly = pd.DataFrame(hourly_data)
+        df_hourly.to_excel(writer, sheet_name='Hourly Breakdown', index=False)
+
+    output.seek(0)
+
+    filename = f"daily_report_{report_date}.xlsx"
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

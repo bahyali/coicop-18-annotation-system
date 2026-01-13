@@ -75,6 +75,54 @@
             transform: translateY(-2px);
         }
 
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+
+        .export-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .export-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .date-input {
+            padding: 10px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            color: #1e293b;
+            background: white;
+            cursor: pointer;
+        }
+
+        .date-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         .stats-summary {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -485,10 +533,17 @@
                     </h1>
                     <p>تتبع أداء المستخدمين - يومي / اسبوعي / شهري / اجمالي</p>
                 </div>
-                <a href="index.html" class="nav-link">
-                    <i data-lucide="layout-dashboard" style="width: 20px; height: 20px;"></i>
-                    لوحة التحكم الرئيسية
-                </a>
+                <div class="header-actions">
+                    <input type="date" id="exportDate" class="date-input" title="اختر التاريخ للتقرير">
+                    <button onclick="exportDailyReport()" class="export-btn" id="exportBtn">
+                        <i data-lucide="download" style="width: 20px; height: 20px;"></i>
+                        تصدير التقرير اليومي
+                    </button>
+                    <a href="index.html" class="nav-link">
+                        <i data-lucide="layout-dashboard" style="width: 20px; height: 20px;"></i>
+                        لوحة التحكم الرئيسية
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -572,6 +627,56 @@
         let usersData = [];
         let currentSort = 'total_count';
         let sortDirection = 'desc';
+
+        // Set default date to today
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('exportDate').value = today;
+        });
+
+        async function exportDailyReport() {
+            const btn = document.getElementById('exportBtn');
+            const dateInput = document.getElementById('exportDate');
+            const selectedDate = dateInput.value;
+
+            btn.disabled = true;
+            btn.innerHTML = `
+                <div class="spinner" style="width: 20px; height: 20px; border-width: 2px; margin: 0;"></div>
+                جاري التصدير...
+            `;
+
+            try {
+                const url = selectedDate
+                    ? `${API_URL}/dashboard/export/daily-report?date=${selectedDate}`
+                    : `${API_URL}/dashboard/export/daily-report`;
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error('Export failed');
+                }
+
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `daily_report_${selectedDate || new Date().toISOString().split('T')[0]}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('فشل تصدير التقرير. يرجى المحاولة مرة أخرى.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <i data-lucide="download" style="width: 20px; height: 20px;"></i>
+                    تصدير التقرير اليومي
+                `;
+                lucide.createIcons();
+            }
+        }
 
         async function fetchAllUsersStats() {
             try {

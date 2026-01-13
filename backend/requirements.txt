@@ -5,3 +5,4 @@ sqlmodel
 pandas
 python-multipart
 requests
+openpyxl
