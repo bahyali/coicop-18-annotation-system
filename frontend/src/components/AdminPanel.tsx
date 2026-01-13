@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { fetchStats, unlockItem, unlockAllItems, requeueEscalated, resetStaleLocks } from '../api';
+import { fetchStats } from '../api';
 import type { Stats } from '../api';
-import { Lock, Unlock, RefreshCw, AlertTriangle, CheckCircle, Clock, Users } from 'lucide-react';
+import { Lock, RefreshCw, AlertTriangle, CheckCircle, Users } from 'lucide-react';
 
 interface AdminPanelProps {
     isOpen: boolean;
@@ -31,46 +31,6 @@ export function AdminPanel({ isOpen, onClose, userId }: AdminPanelProps) {
             loadStats();
         }
     }, [isOpen]);
-
-    const handleUnlockItem = async (itemId: string) => {
-        try {
-            await unlockItem(itemId);
-            setMessage(`Item ${itemId} unlocked`);
-            loadStats();
-        } catch (error) {
-            setMessage('Failed to unlock item');
-        }
-    };
-
-    const handleUnlockAll = async () => {
-        try {
-            const result = await unlockAllItems();
-            setMessage(result.message);
-            loadStats();
-        } catch (error) {
-            setMessage('Failed to unlock items');
-        }
-    };
-
-    const handleRequeueEscalated = async () => {
-        try {
-            const result = await requeueEscalated();
-            setMessage(result.message);
-            loadStats();
-        } catch (error) {
-            setMessage('Failed to requeue escalated items');
-        }
-    };
-
-    const handleResetStaleLocks = async () => {
-        try {
-            const result = await resetStaleLocks(30);
-            setMessage(result.message);
-            loadStats();
-        } catch (error) {
-            setMessage('Failed to reset stale locks');
-        }
-    };
 
     if (!isOpen) return null;
 
