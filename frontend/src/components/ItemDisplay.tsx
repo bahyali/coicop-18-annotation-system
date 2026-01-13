@@ -316,7 +316,7 @@ export function ItemDisplay({ item, classificationMap = {}, existingClassificati
             )}
 
             {/* Metadata Section */}
-            {Object.keys(item.meta_data).length > 0 && (
+            {item.meta_data && Object.keys(item.meta_data).length > 0 && (
                 <div className="p-4 border-t border-slate-100">
                     <h3 className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Metadata</h3>
                     <div className="flex flex-wrap gap-4">

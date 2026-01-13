@@ -1,0 +1,46 @@
+# Docker Compose للإنتاج - استخدام الصور من Docker Hub
+# استخدم هذا الملف على أي جهاز لتشغيل المشروع
+
+services:
+  backend:
+    image: radhyah/coicop-backend:latest
+    container_name: coicop-backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./database.db:/app/database.db
+      - ./dataset.csv:/app/dataset.csv
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - coicop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    image: radhyah/coicop-frontend:latest
+    container_name: coicop-frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - coicop-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  coicop-network:
+    driver: bridge
+
+volumes:
+  database:
+  dataset:

@@ -1,22 +1,21 @@
 # Docker Compose for pre-built images from Docker Hub
-# Usage: docker compose -f docker-compose.hub.yml up
+# Usage: docker-compose -f docker-compose.hub.yml up -d
 
 services:
   backend:
-    image: radhyah/coicop-validation-backend:latest
-    container_name: backend
+    image: radhyah/coicop-backend:latest
+    container_name: coicop-backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
-      - backend_db:/app/data
-      - ./results:/app/results
+      - backend_data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
 
   frontend:
-    image: radhyah/coicop-validation-frontend:latest
-    container_name: frontend
+    image: radhyah/coicop-frontend:latest
+    container_name: coicop-frontend
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     depends_on:
@@ -24,4 +23,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  backend_db:
+  backend_data:

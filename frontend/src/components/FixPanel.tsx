@@ -19,6 +19,7 @@ const parseLines = (text?: string, limit = 2) => {
 };
 
 const levelLabel = (code: string) => {
+    if (!code) return "Unknown";
     const parts = code.split('.');
     if (parts.length === 1) return "Division";
     if (parts.length === 2) return "Group";
