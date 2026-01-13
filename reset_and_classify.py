@@ -160,7 +160,7 @@ def classify_with_openrouter(prompt: str, valid_codes: set, api_key: str, timeou
         logger.info("[OPENROUTER REQUEST]")
         logger.info(f"Model: {OPENROUTER_MODEL}")
         logger.info(f"Prompt length: {len(prompt)} chars")
-        logger.debug(f"Full prompt:\n{prompt}")
+        # logger.debug(f"Full prompt:\n{prompt}")
         logger.info("=" * 80)
 
         response = requests.post(
