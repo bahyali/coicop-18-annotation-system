@@ -139,3 +139,28 @@ export const deleteUser = async (username: string): Promise<{message: string}> =
     const response = await api.delete(`/users/${encodeURIComponent(username)}`);
     return response.data;
 };
+
+// Personal Dashboard Stats
+
+export interface PeriodStats {
+    count: number;
+    time_minutes: number;
+    avg_time_seconds: number;
+}
+
+export interface UserDetailedStats {
+    reviewer_id: string;
+    total: PeriodStats;
+    today: PeriodStats;
+    this_week: PeriodStats;
+    this_month: PeriodStats;
+    agreement_rate: number;
+    action_breakdown: Record<string, number>;
+    daily_breakdown: Array<{ date: string; count: number; time_minutes: number }>;
+    weekly_breakdown: Array<{ week_start: string; week_end: string; count: number; time_minutes: number }>;
+}
+
+export const fetchUserDetailedStats = async (userId: string): Promise<UserDetailedStats> => {
+    const response = await api.get<UserDetailedStats>(`/dashboard/user-detailed-stats/${encodeURIComponent(userId)}`);
+    return response.data;
+};

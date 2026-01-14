@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchNextItem, submitDecision, fetchClassification, fetchUsers, createUser } from './api';
+import { fetchNextItem, submitDecision, fetchClassification, fetchUsers, createUser, fetchUserDetailedStats } from './api';
 import type { Item, Decision, Classification, User } from './api';
 import { ItemDisplay } from './components/ItemDisplay';
 import { FixPanel } from './components/FixPanel';
 import { AdminPanel } from './components/AdminPanel';
-import { Loader2, Settings, Timer, RotateCcw, Pause, Play, UserPlus, Users } from 'lucide-react';
+import { Loader2, Timer, RotateCcw, Pause, Play, UserPlus, Users, TrendingUp } from 'lucide-react';
 
 export function AnnotationView() {
+    const DEFAULT_TARGET = 2400
     const [currentItem, setCurrentItem] = useState<Item | null>(null);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState(() => {
@@ -29,6 +30,26 @@ export function AnnotationView() {
     const [isCreatingNewUser, setIsCreatingNewUser] = useState(false);
     const [usersLoading, setUsersLoading] = useState(true);
 
+    // Daily progress tracking for the button
+    const [todayCount, setTodayCount] = useState(0);
+    const [dailyTarget, setDailyTarget] = useState(() => {
+        return parseInt(localStorage.getItem(`dailyTarget_${userId}`) || DEFAULT_TARGET.toString(), 10);
+    });
+    const progressPercent = dailyTarget > 0 ? Math.min((todayCount / dailyTarget) * 100, 100) : 0;
+
+    const loadProgress = useCallback(async () => {
+        if (!userId) return;
+        // Refresh target from localStorage (might have changed in dashboard)
+        const savedTarget = parseInt(localStorage.getItem(`dailyTarget_${userId}`) || DEFAULT_TARGET.toString(), 10);
+        setDailyTarget(savedTarget);
+        try {
+            const stats = await fetchUserDetailedStats(userId);
+            setTodayCount(stats.today.count);
+        } catch (e) {
+            console.error("Failed to load progress", e);
+        }
+    }, [userId]);
+
     const loadNext = useCallback(async () => {
         setLoading(true);
         try {
@@ -48,8 +69,9 @@ export function AnnotationView() {
         // Only load items after user has submitted their name
         if (!showNamePrompt && userId) {
             loadNext();
+            loadProgress();
         }
-    }, [loadNext, showNamePrompt, userId]);
+    }, [loadNext, loadProgress, showNamePrompt, userId]);
 
     // Timer update effect
     useEffect(() => {
@@ -109,6 +131,7 @@ export function AnnotationView() {
             };
 
             await submitDecision(decision);
+            setTodayCount(prev => prev + 1); // Update progress immediately
             await loadNext();
         } catch (e) {
             console.error("Failed to submit decision", e);
@@ -356,11 +379,16 @@ export function AnnotationView() {
                     <div className="text-sm text-slate-500 font-mono flex items-center gap-4">
                         <button
                             onClick={() => setIsAdminPanelOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors"
-                            title="Admin Panel"
+                            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all overflow-hidden border border-indigo-300 hover:border-indigo-400"
+                            title={`My Progress: ${todayCount}/${dailyTarget} (${progressPercent.toFixed(0)}%)`}
+                            style={{
+                                background: `linear-gradient(to right, ${progressPercent >= 100 ? '#22c55e' : '#818cf8'} ${progressPercent}%, #e0e7ff ${progressPercent}%)`
+                            }}
                         >
-                            <Settings size={16} />
-                            <span className="text-xs font-medium">Admin</span>
+                            <TrendingUp size={16} className={progressPercent >= 100 ? 'text-white' : 'text-indigo-700'} />
+                            <span className={`text-xs font-medium ${progressPercent >= 100 ? 'text-white' : 'text-indigo-700'}`}>
+                                {todayCount}/{dailyTarget}
+                            </span>
                         </button>
                         <div className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg ${isPaused ? 'bg-slate-100 border-slate-300' : 'bg-amber-50 border-amber-200'}`}>
                             <Timer size={16} className={isPaused ? 'text-slate-400' : 'text-amber-600'} />
@@ -423,7 +451,7 @@ export function AnnotationView() {
                 isOpen={isAdminPanelOpen}
                 onClose={() => {
                     setIsAdminPanelOpen(false);
-                    loadNext(); // Reload after closing admin panel
+                    loadProgress(); // Refresh progress (target may have changed)
                 }}
                 userId={userId}
             />
