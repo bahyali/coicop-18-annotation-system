@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchNextItem, submitDecision, fetchClassification } from './api';
-import type { Item, Decision, Classification } from './api';
+import { fetchNextItem, submitDecision, fetchClassification, fetchUsers, createUser } from './api';
+import type { Item, Decision, Classification, User } from './api';
 import { ItemDisplay } from './components/ItemDisplay';
 import { FixPanel } from './components/FixPanel';
 import { AdminPanel } from './components/AdminPanel';
-import { Loader2, Settings, Timer, RotateCcw, Pause, Play } from 'lucide-react';
+import { Loader2, Settings, Timer, RotateCcw, Pause, Play, UserPlus, Users } from 'lucide-react';
 
 export function AnnotationView() {
     const [currentItem, setCurrentItem] = useState<Item | null>(null);
@@ -22,6 +22,12 @@ export function AnnotationView() {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [pausedTime, setPausedTime] = useState(0); // Accumulated time when paused
+
+    // User management states
+    const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
+    const [selectedUser, setSelectedUser] = useState('');
+    const [isCreatingNewUser, setIsCreatingNewUser] = useState(false);
+    const [usersLoading, setUsersLoading] = useState(true);
 
     const loadNext = useCallback(async () => {
         setLoading(true);
@@ -176,19 +182,60 @@ export function AnnotationView() {
         });
     }, [currentItem, classifications]);
 
-    const handleNameSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (nameInput.trim()) {
-            const trimmedName = nameInput.trim();
-            localStorage.setItem('reviewer_name', trimmedName);
-            setUserId(trimmedName);
-            setShowNamePrompt(false);
+    // Load registered users when showing name prompt
+    useEffect(() => {
+        if (showNamePrompt) {
+            setUsersLoading(true);
+            fetchUsers()
+                .then((users) => {
+                    setRegisteredUsers(users);
+                    setIsCreatingNewUser(users.length === 0);
+                })
+                .catch((err) => {
+                    console.error("Failed to fetch users", err);
+                    setIsCreatingNewUser(true);
+                })
+                .finally(() => setUsersLoading(false));
         }
+    }, [showNamePrompt]);
+
+    const handleNameSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        let finalUsername = '';
+
+        if (isCreatingNewUser) {
+            // Create new user
+            if (!nameInput.trim()) return;
+            const trimmedName = nameInput.trim();
+            try {
+                await createUser(trimmedName, 'reviewer');
+                finalUsername = trimmedName;
+            } catch (err: any) {
+                if (err.response?.status === 400) {
+                    // User already exists, just use it
+                    finalUsername = trimmedName;
+                } else {
+                    console.error("Failed to create user", err);
+                    alert("Failed to create user. Please try again.");
+                    return;
+                }
+            }
+        } else {
+            // Use selected existing user
+            if (!selectedUser) return;
+            finalUsername = selectedUser;
+        }
+
+        localStorage.setItem('reviewer_name', finalUsername);
+        setUserId(finalUsername);
+        setShowNamePrompt(false);
     };
 
     const handleChangeName = () => {
         localStorage.removeItem('reviewer_name');
         setNameInput('');
+        setSelectedUser('');
         setShowNamePrompt(true);
     };
 
@@ -197,24 +244,86 @@ export function AnnotationView() {
             <div className="flex h-screen items-center justify-center bg-slate-50">
                 <form onSubmit={handleNameSubmit} className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4">
                     <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">COICOP Validator</h2>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Enter your name:
-                    </label>
-                    <input
-                        type="text"
-                        value={nameInput}
-                        onChange={(e) => setNameInput(e.target.value)}
-                        placeholder="e.g. Ahmed, Sara, Mohammed..."
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-4"
-                        autoFocus
-                    />
-                    <button
-                        type="submit"
-                        disabled={!nameInput.trim()}
-                        className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Start Reviewing
-                    </button>
+
+                    {usersLoading ? (
+                        <div className="flex items-center justify-center py-8 text-slate-400">
+                            <Loader2 className="animate-spin mr-2" /> Loading users...
+                        </div>
+                    ) : isCreatingNewUser ? (
+                        // Create new user form
+                        <>
+                            <div className="flex items-center gap-2 mb-4 text-indigo-600">
+                                <UserPlus size={20} />
+                                <span className="font-medium">Create New User</span>
+                            </div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Enter your name:
+                            </label>
+                            <input
+                                type="text"
+                                value={nameInput}
+                                onChange={(e) => setNameInput(e.target.value)}
+                                placeholder="e.g. Ahmed, Sara, Mohammed..."
+                                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-4"
+                                autoFocus
+                            />
+                            <button
+                                type="submit"
+                                disabled={!nameInput.trim()}
+                                className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed mb-3"
+                            >
+                                Create & Start Reviewing
+                            </button>
+                            {registeredUsers.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreatingNewUser(false)}
+                                    className="w-full text-slate-500 hover:text-slate-700 text-sm py-2"
+                                >
+                                    Select existing user instead
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        // Select existing user
+                        <>
+                            <div className="flex items-center gap-2 mb-4 text-indigo-600">
+                                <Users size={20} />
+                                <span className="font-medium">Select User</span>
+                            </div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Choose your account:
+                            </label>
+                            <select
+                                value={selectedUser}
+                                onChange={(e) => setSelectedUser(e.target.value)}
+                                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-4 bg-white"
+                                autoFocus
+                            >
+                                <option value="">-- Select a user --</option>
+                                {registeredUsers.map((user) => (
+                                    <option key={user.username} value={user.username}>
+                                        {user.username} ({user.role})
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                type="submit"
+                                disabled={!selectedUser}
+                                className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed mb-3"
+                            >
+                                Start Reviewing
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsCreatingNewUser(true)}
+                                className="w-full flex items-center justify-center gap-2 text-indigo-600 hover:text-indigo-800 text-sm py-2 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                            >
+                                <UserPlus size={16} />
+                                Create new user
+                            </button>
+                        </>
+                    )}
                 </form>
             </div>
         );

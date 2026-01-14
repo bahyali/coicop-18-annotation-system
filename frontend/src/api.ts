@@ -117,3 +117,25 @@ export const resetStaleLocks = async (maxAgeMinutes = 30): Promise<{message: str
     });
     return response.data;
 };
+
+// User Management
+
+export interface User {
+    username: string;
+    role: string;
+}
+
+export const fetchUsers = async (): Promise<User[]> => {
+    const response = await api.get<User[]>('/users');
+    return response.data;
+};
+
+export const createUser = async (username: string, role: string = 'reviewer'): Promise<User> => {
+    const response = await api.post<User>('/users', { username, role });
+    return response.data;
+};
+
+export const deleteUser = async (username: string): Promise<{message: string}> => {
+    const response = await api.delete(`/users/${encodeURIComponent(username)}`);
+    return response.data;
+};

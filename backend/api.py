@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session
+from sqlmodel import Session, select
 from database import get_session
-from models import Item, Decision, Classification
+from models import Item, Decision, Classification, User
 import services
 from typing import Optional, List
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -77,3 +78,58 @@ def search_classifications(
     limit = max(1, min(limit, 50))
     results = services.search_classifications(session, query, limit)
     return results
+
+
+# User Management Endpoints
+
+class UserCreate(BaseModel):
+    username: str
+    role: str = "reviewer"
+
+
+@router.get("/users", response_model=List[User])
+def list_users(session: Session = Depends(get_session)):
+    """Get all registered users"""
+    users = session.exec(select(User).order_by(User.username)).all()
+    return users
+
+
+@router.get("/users/{username}", response_model=User)
+def get_user(username: str, session: Session = Depends(get_session)):
+    """Get a specific user by username"""
+    user = session.get(User, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router.post("/users", response_model=User)
+def create_user(user_data: UserCreate, session: Session = Depends(get_session)):
+    """Create a new user"""
+    # Check if user already exists
+    existing = session.get(User, user_data.username)
+    if existing:
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    # Validate role
+    valid_roles = ["reviewer", "senior", "admin"]
+    if user_data.role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
+
+    user = User(username=user_data.username, role=user_data.role)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+@router.delete("/users/{username}")
+def delete_user(username: str, session: Session = Depends(get_session)):
+    """Delete a user"""
+    user = session.get(User, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    session.delete(user)
+    session.commit()
+    return {"message": f"User {username} deleted"}
