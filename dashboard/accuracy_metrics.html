@@ -145,12 +145,65 @@
         }
 
         .metric-description {
-            font-size: 1rem;
-            color: #64748b;
+            font-size: 0.95rem;
+            color: #475569;
+            line-height: 1.8;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            text-align: right;
+        }
+
+        .metric-description-title {
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 12px;
+            font-size: 1.05rem;
+        }
+
+        .metric-description ul {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0 0;
+        }
+
+        .metric-description li {
+            padding: 6px 0 6px 24px;
+            position: relative;
             line-height: 1.6;
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid #e2e8f0;
+        }
+
+        .metric-description li:before {
+            content: "●";
+            position: absolute;
+            right: 0;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        .metric-card.masterworks .metric-description li:before {
+            color: #10b981;
+        }
+
+        .metric-card.external .metric-description li:before {
+            color: #3b82f6;
+        }
+
+        .metric-card.integration .metric-description li:before {
+            color: #f59e0b;
+        }
+
+        .metric-card.agreement .metric-description li:before {
+            color: #8b5cf6;
+        }
+
+        .metric-description code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #334155;
+            font-family: 'Courier New', monospace;
         }
 
         .metric-count {
@@ -228,7 +281,12 @@
                 <div class="metric-percentage" id="masterworks-percentage">0%</div>
                 <div class="metric-count" id="masterworks-count">0 من 0</div>
                 <div class="metric-description">
-                    نسبة التطابق بين تصنيفات نموذجنا (model_code) والتصنيفات اليدوية النهائية
+                    <div class="metric-description-title">ما يقيسه المؤشر:</div>
+                    <ul>
+                        <li>مقارنة تصنيفات نموذجنا (<code>model_code</code>) مع القرار اليدوي النهائي</li>
+                        <li>يعكس مدى دقة النموذج الداخلي في التنبؤ الصحيح</li>
+                        <li>يشمل فقط الحالات التي تم التحقق منها يدوياً</li>
+                    </ul>
                 </div>
             </div>
 
@@ -238,7 +296,12 @@
                 <div class="metric-percentage" id="external-percentage">0%</div>
                 <div class="metric-count" id="external-count">0 من 0</div>
                 <div class="metric-description">
-                    نسبة التطابق بين تصنيفات نموذج IT (code) والتصنيفات اليدوية النهائية
+                    <div class="metric-description-title">ما يقيسه المؤشر:</div>
+                    <ul>
+                        <li>مقارنة تصنيفات النموذج الخارجي (<code>code</code>) مع القرار اليدوي النهائي</li>
+                        <li>يقيس أداء النموذج الخارجي من IT</li>
+                        <li>يساعد في تقييم جودة التصنيفات الأولية المقدمة</li>
+                    </ul>
                 </div>
             </div>
 
@@ -248,17 +311,27 @@
                 <div class="metric-percentage" id="integration-percentage">0%</div>
                 <div class="metric-count" id="integration-count">0 من 0</div>
                 <div class="metric-description">
-                    نسبة التطابق الكامل بين جميع المصادر الثلاثة: نموذج IT (code) + نموذجنا (model_code) + التصنيف اليدوي
+                    <div class="metric-description-title">ما يقيسه المؤشر:</div>
+                    <ul>
+                        <li>التطابق الكامل بين المصادر الثلاثة معاً</li>
+                        <li>نموذج IT + نموذجنا + القرار اليدوي = متطابقون جميعاً</li>
+                        <li>يعكس الحالات ذات الثقة العالية من جميع الأطراف</li>
+                    </ul>
                 </div>
             </div>
 
             <!-- Metric 4: Model Agreement -->
             <div class="metric-card agreement">
-                <div class="metric-title">دقة النماذج مع بعضها البعض</div>
+                <div class="metric-title">توافق النماذج</div>
                 <div class="metric-percentage" id="agreement-percentage">0%</div>
                 <div class="metric-count" id="agreement-count">0 من 0</div>
                 <div class="metric-description">
-                    نسبة التطابق المباشر بين تصنيفات نموذج IT (code) ونموذجنا (model_code) بدون التحقق اليدوي
+                    <div class="metric-description-title">ما يقيسه المؤشر:</div>
+                    <ul>
+                        <li>التطابق المباشر بين نموذج IT ونموذجنا</li>
+                        <li>يشمل جميع الحالات (حتى غير المحققة يدوياً)</li>
+                        <li>يقيس مستوى الاتفاق التلقائي بين النموذجين</li>
+                    </ul>
                 </div>
             </div>
         </div>
