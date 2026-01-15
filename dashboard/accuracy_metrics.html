@@ -260,10 +260,16 @@
                     </h1>
                     <p>مقارنة دقة التصنيفات من مصادر مختلفة</p>
                 </div>
-                <a href="index.html" class="nav-link">
-                    <i data-lucide="arrow-right"></i>
-                    العودة للوحة التحكم
-                </a>
+                <div style="display: flex; gap: 12px;">
+                    <button id="exportBtn" class="nav-link" style="border: none; cursor: pointer;">
+                        <i data-lucide="download"></i>
+                        تصدير التقرير اليومي
+                    </button>
+                    <a href="index.html" class="nav-link">
+                        <i data-lucide="arrow-right"></i>
+                        العودة للوحة التحكم
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -394,6 +400,41 @@
                 lucide.createIcons();
             }
         }
+
+        // Export to Excel functionality
+        document.getElementById('exportBtn').addEventListener('click', async function() {
+            try {
+                const btn = this;
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader-2"></i> جاري التصدير...';
+                lucide.createIcons();
+
+                const response = await fetch(`${BACKEND_URL}/api/dashboard/accuracy-metrics/export`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `accuracy_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="download"></i> تصدير التقرير اليومي';
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Error exporting:', error);
+                alert('حدث خطأ أثناء التصدير: ' + error.message);
+                this.disabled = false;
+                this.innerHTML = '<i data-lucide="download"></i> تصدير التقرير اليومي';
+                lucide.createIcons();
+            }
+        });
 
         // Initialize icons and load data
         lucide.createIcons();

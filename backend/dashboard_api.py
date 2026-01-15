@@ -7,6 +7,8 @@ from models import Item, Decision, User
 from database import get_session
 import pandas as pd
 from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
 
 router = APIRouter()
 
@@ -641,3 +643,232 @@ def get_accuracy_metrics(session: Session = Depends(get_session)):
             "percentage": round(model_agreement_matches / model_agreement_total * 100, 2) if model_agreement_total > 0 else 0
         }
     }
+
+
+def calculate_comparison_level(code1: str, code2: str) -> str:
+    """
+    Determine the comparison level between two COICOP codes
+    Returns: 'exact', 'group', 'division', or 'mismatch'
+    """
+    if not code1 or not code2:
+        return 'mismatch'
+
+    if code1 == code2:
+        return 'exact'
+
+    # COICOP codes format: XX.X.X.X (e.g., 01.1.1.1)
+    parts1 = code1.split('.')
+    parts2 = code2.split('.')
+
+    if len(parts1) < 2 or len(parts2) < 2:
+        return 'mismatch'
+
+    # Check division level (first part, e.g., "01")
+    if parts1[0] != parts2[0]:
+        return 'mismatch'
+
+    # Check group level (first two parts, e.g., "01.1")
+    if len(parts1) >= 2 and len(parts2) >= 2:
+        if parts1[0] == parts2[0] and parts1[1] == parts2[1]:
+            return 'group'
+
+    # Same division but different group
+    return 'division'
+
+
+def calculate_detailed_metrics(results, metric_type: str):
+    """
+    Calculate detailed accuracy metrics including partial matches at different levels
+    metric_type: 'masterworks', 'external', 'integration', or 'agreement'
+    """
+    total_items = len(results)
+    exact_matches = 0
+    group_matches = 0  # Same up to group level
+    division_matches = 0  # Same division only
+    mismatches = 0
+
+    for item, decision in results:
+        manual_code = decision.final_code
+
+        if metric_type == 'masterworks':
+            predicted_code = item.model_code
+        elif metric_type == 'external':
+            predicted_code = item.existing_code
+        elif metric_type == 'integration':
+            # For integration, check if all three agree
+            if (item.existing_code and item.model_code and
+                item.existing_code == item.model_code == manual_code):
+                exact_matches += 1
+                continue
+            else:
+                mismatches += 1
+                continue
+        else:  # agreement
+            predicted_code = None
+
+        if not predicted_code:
+            mismatches += 1
+            continue
+
+        level = calculate_comparison_level(predicted_code, manual_code)
+
+        if level == 'exact':
+            exact_matches += 1
+        elif level == 'group':
+            group_matches += 1
+        elif level == 'division':
+            division_matches += 1
+        else:
+            mismatches += 1
+
+    # Calculate accuracy percentages
+    group_accuracy = ((exact_matches + group_matches) / total_items * 100) if total_items > 0 else 0
+    division_accuracy = ((exact_matches + group_matches + division_matches) / total_items * 100) if total_items > 0 else 0
+
+    return {
+        'total_items': total_items,
+        'exact_matches': exact_matches,
+        'group_matches': group_matches,
+        'division_matches': division_matches,
+        'mismatches': mismatches,
+        'exact_percentage': round(exact_matches / total_items * 100, 2) if total_items > 0 else 0,
+        'group_accuracy': round(group_accuracy, 2),
+        'division_accuracy': round(division_accuracy, 2)
+    }
+
+
+def calculate_model_agreement_details(all_items):
+    """Calculate detailed model agreement metrics"""
+    total_items = 0
+    exact_matches = 0
+    group_matches = 0
+    division_matches = 0
+    mismatches = 0
+
+    for item in all_items:
+        if item.existing_code and item.model_code:
+            total_items += 1
+            level = calculate_comparison_level(item.existing_code, item.model_code)
+
+            if level == 'exact':
+                exact_matches += 1
+            elif level == 'group':
+                group_matches += 1
+            elif level == 'division':
+                division_matches += 1
+            else:
+                mismatches += 1
+
+    group_accuracy = ((exact_matches + group_matches) / total_items * 100) if total_items > 0 else 0
+    division_accuracy = ((exact_matches + group_matches + division_matches) / total_items * 100) if total_items > 0 else 0
+
+    return {
+        'total_items': total_items,
+        'exact_matches': exact_matches,
+        'group_matches': group_matches,
+        'division_matches': division_matches,
+        'mismatches': mismatches,
+        'exact_percentage': round(exact_matches / total_items * 100, 2) if total_items > 0 else 0,
+        'group_accuracy': round(group_accuracy, 2),
+        'division_accuracy': round(division_accuracy, 2)
+    }
+
+
+@router.get("/dashboard/accuracy-metrics/export")
+async def export_accuracy_metrics(session: Session = Depends(get_session)):
+    """
+    Export accuracy metrics as Excel file with 4 sheets
+    Each sheet represents one of the four accuracy metrics with detailed breakdown
+    """
+
+    # Get all items that have decisions (completed items)
+    statement = select(Item, Decision).where(
+        Item.id == Decision.item_id,
+        Decision.action != 'escalate'
+    )
+    results = session.exec(statement).all()
+
+    # Get all items for model agreement
+    all_items = session.exec(select(Item)).all()
+
+    # Calculate detailed metrics for each type
+    masterworks_details = calculate_detailed_metrics(results, 'masterworks')
+    external_details = calculate_detailed_metrics(results, 'external')
+    integration_details = calculate_detailed_metrics(results, 'integration')
+    agreement_details = calculate_model_agreement_details(all_items)
+
+    # Create Excel workbook
+    wb = Workbook()
+
+    # Remove default sheet
+    wb.remove(wb.active)
+
+    # Define styles
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=12)
+    header_alignment = Alignment(horizontal="center", vertical="center")
+
+    cell_alignment = Alignment(horizontal="left", vertical="center")
+    number_alignment = Alignment(horizontal="right", vertical="center")
+
+    def create_sheet(wb, sheet_name: str, details: dict):
+        """Helper function to create a formatted sheet"""
+        ws = wb.create_sheet(title=sheet_name)
+
+        # Add headers
+        ws['A1'] = 'Metric'
+        ws['B1'] = 'Value'
+
+        # Style headers
+        ws['A1'].fill = header_fill
+        ws['A1'].font = header_font
+        ws['A1'].alignment = header_alignment
+        ws['B1'].fill = header_fill
+        ws['B1'].font = header_font
+        ws['B1'].alignment = header_alignment
+
+        # Add data
+        row = 2
+        data = [
+            ('Total items', details['total_items']),
+            ('Exact matches', f"{details['exact_matches']} ({details['exact_percentage']}%)"),
+            ('Partial (group level)', details['group_matches']),
+            ('Partial (division level)', details['division_matches']),
+            ('Mismatches', details['mismatches']),
+            ('Group Accuracy', f"{details['group_accuracy']}%"),
+            ('Division Accuracy', f"{details['division_accuracy']}%")
+        ]
+
+        for metric, value in data:
+            ws[f'A{row}'] = metric
+            ws[f'B{row}'] = value
+            ws[f'A{row}'].alignment = cell_alignment
+            ws[f'B{row}'].alignment = number_alignment
+            row += 1
+
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['B'].width = 20
+
+        return ws
+
+    # Create sheets for each metric
+    create_sheet(wb, "نموذجنا", masterworks_details)
+    create_sheet(wb, "نموذج IT", external_details)
+    create_sheet(wb, "الدقة التكاملية", integration_details)
+    create_sheet(wb, "توافق النماذج", agreement_details)
+
+    # Save to BytesIO
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Generate filename with timestamp
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"accuracy_metrics_{timestamp}.xlsx"
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
