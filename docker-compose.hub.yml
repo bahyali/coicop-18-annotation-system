@@ -1,24 +1,39 @@
 # Docker Compose for pre-built images from Docker Hub
 # Usage: docker-compose -f docker-compose.hub.yml up -d
+#
+# Ports:
+# - Backend:  8000
+# - Frontend: 8080
+# - Dashboard: 7896
+#
+# To start fresh (delete all data):
+# docker-compose -f docker-compose.hub.yml down -v
+# docker-compose -f docker-compose.hub.yml pull
+# docker-compose -f docker-compose.hub.yml up -d
 
 services:
   backend:
     image: radhyah/coicop-backend:latest
     container_name: coicop-backend
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "8000:8000"
     volumes:
       - backend_data:/app/data
       - ./results:/app/results
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
     image: radhyah/coicop-frontend:latest
     container_name: coicop-frontend
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - "8080:80"
     depends_on:
       - backend
     restart: unless-stopped
@@ -27,7 +42,7 @@ services:
     image: radhyah/coicop-dashboard:latest
     container_name: coicop-dashboard
     ports:
-      - "${DASHBOARD_PORT:-7896}:7896"
+      - "7896:7896"
     depends_on:
       - backend
     restart: unless-stopped
