@@ -5,6 +5,7 @@ WORKDIR /app
 # Copy dashboard files
 COPY index.html .
 COPY user_stats.html .
+COPY accuracy_metrics.html .
 COPY server.py .
 
 # Expose dashboard port

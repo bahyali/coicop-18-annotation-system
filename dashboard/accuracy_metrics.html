@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دقة النماذج - Accuracy Metrics</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 32px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #64748b;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: slideUp 0.5s ease-out;
+            text-align: center;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .metric-card.masterworks {
+            border-top: 4px solid #10b981;
+        }
+
+        .metric-card.external {
+            border-top: 4px solid #3b82f6;
+        }
+
+        .metric-card.integration {
+            border-top: 4px solid #f59e0b;
+        }
+
+        .metric-card.agreement {
+            border-top: 4px solid #8b5cf6;
+        }
+
+        .metric-percentage {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin: 16px 0;
+            line-height: 1;
+        }
+
+        .metric-card.masterworks .metric-percentage {
+            color: #10b981;
+        }
+
+        .metric-card.external .metric-percentage {
+            color: #3b82f6;
+        }
+
+        .metric-card.integration .metric-percentage {
+            color: #f59e0b;
+        }
+
+        .metric-card.agreement .metric-percentage {
+            color: #8b5cf6;
+        }
+
+        .metric-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 12px;
+        }
+
+        .metric-description {
+            font-size: 1rem;
+            color: #64748b;
+            line-height: 1.6;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .metric-count {
+            font-size: 1.1rem;
+            color: #64748b;
+            margin-top: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 1.2rem;
+            color: #64748b;
+        }
+
+        .error {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 1.2rem;
+            color: #ef4444;
+            background: white;
+            border-radius: 16px;
+            margin: 20px 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <div>
+                    <h1>
+                        <i data-lucide="target"></i>
+                        دقة النماذج
+                    </h1>
+                    <p>مقارنة دقة التصنيفات من مصادر مختلفة</p>
+                </div>
+                <a href="index.html" class="nav-link">
+                    <i data-lucide="arrow-right"></i>
+                    العودة للوحة التحكم
+                </a>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <i data-lucide="loader-2"></i>
+            جاري تحميل البيانات...
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="metrics" class="metrics-grid" style="display: none;">
+            <!-- Metric 1: MasterWorks Accuracy -->
+            <div class="metric-card masterworks">
+                <div class="metric-title">دقة MasterWorks</div>
+                <div class="metric-percentage" id="masterworks-percentage">0%</div>
+                <div class="metric-count" id="masterworks-count">0 من 0</div>
+                <div class="metric-description">
+                    نسبة التطابق بين تصنيفات نموذج MasterWorks (model_code) والتصنيفات اليدوية النهائية
+                </div>
+            </div>
+
+            <!-- Metric 2: External Model Accuracy -->
+            <div class="metric-card external">
+                <div class="metric-title">دقة النموذج الخارجي</div>
+                <div class="metric-percentage" id="external-percentage">0%</div>
+                <div class="metric-count" id="external-count">0 من 0</div>
+                <div class="metric-description">
+                    نسبة التطابق بين تصنيفات النموذج الخارجي (code) والتصنيفات اليدوية النهائية
+                </div>
+            </div>
+
+            <!-- Metric 3: Integration Accuracy -->
+            <div class="metric-card integration">
+                <div class="metric-title">الدقة التكاملية</div>
+                <div class="metric-percentage" id="integration-percentage">0%</div>
+                <div class="metric-count" id="integration-count">0 من 0</div>
+                <div class="metric-description">
+                    نسبة التطابق الكامل بين جميع المصادر الثلاثة: النموذج الخارجي (code) + MasterWorks (model_code) + التصنيف اليدوي
+                </div>
+            </div>
+
+            <!-- Metric 4: Model Agreement -->
+            <div class="metric-card agreement">
+                <div class="metric-title">دقة النماذج مع بعضها البعض</div>
+                <div class="metric-percentage" id="agreement-percentage">0%</div>
+                <div class="metric-count" id="agreement-count">0 من 0</div>
+                <div class="metric-description">
+                    نسبة التطابق المباشر بين تصنيفات النموذج الخارجي (code) و MasterWorks (model_code) بدون التحقق اليدوي
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get backend URL from environment or default to localhost
+        const BACKEND_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:8000'
+            : `http://${window.location.hostname}:8000`;
+
+        async function loadMetrics() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/dashboard/accuracy-metrics`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                // Hide loading, show metrics
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('metrics').style.display = 'grid';
+
+                // Update MasterWorks Accuracy
+                document.getElementById('masterworks-percentage').textContent =
+                    `${data.masterworks_accuracy.percentage.toFixed(2)}%`;
+                document.getElementById('masterworks-count').textContent =
+                    `${data.masterworks_accuracy.matches} من ${data.masterworks_accuracy.total}`;
+
+                // Update External Model Accuracy
+                document.getElementById('external-percentage').textContent =
+                    `${data.external_model_accuracy.percentage.toFixed(2)}%`;
+                document.getElementById('external-count').textContent =
+                    `${data.external_model_accuracy.matches} من ${data.external_model_accuracy.total}`;
+
+                // Update Integration Accuracy
+                document.getElementById('integration-percentage').textContent =
+                    `${data.integration_accuracy.percentage.toFixed(2)}%`;
+                document.getElementById('integration-count').textContent =
+                    `${data.integration_accuracy.matches} من ${data.integration_accuracy.total}`;
+
+                // Update Model Agreement
+                document.getElementById('agreement-percentage').textContent =
+                    `${data.model_agreement.percentage.toFixed(2)}%`;
+                document.getElementById('agreement-count').textContent =
+                    `${data.model_agreement.matches} من ${data.model_agreement.total}`;
+
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.style.display = 'block';
+                errorDiv.innerHTML = `
+                    <i data-lucide="alert-circle"></i>
+                    <br><br>
+                    خطأ في تحميل البيانات: ${error.message}
+                    <br><br>
+                    <small>تأكد من تشغيل الخادم الخلفي على ${BACKEND_URL}</small>
+                `;
+                lucide.createIcons();
+            }
+        }
+
+        // Initialize icons and load data
+        lucide.createIcons();
+        loadMetrics();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadMetrics, 30000);
+    </script>
+</body>
+</html>

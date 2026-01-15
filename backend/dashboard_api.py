@@ -559,3 +559,85 @@ async def export_daily_report(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+@router.get("/dashboard/accuracy-metrics")
+def get_accuracy_metrics(session: Session = Depends(get_session)):
+    """
+    Calculate 4 accuracy metrics:
+    1. MasterWorks Accuracy: model_code vs manual decision
+    2. External Model Accuracy: existing_code (code column from CSV) vs manual decision
+    3. Integration Accuracy: All three agree (existing_code == model_code == manual decision)
+    4. Model Agreement: existing_code vs model_code similarity (without manual intervention)
+    """
+
+    # Get all items that have decisions (completed items)
+    statement = select(Item, Decision).where(
+        Item.id == Decision.item_id,
+        Decision.action != 'escalate'  # Exclude escalated items
+    )
+    results = session.exec(statement).all()
+
+    if not results:
+        return {
+            "masterworks_accuracy": {"matches": 0, "total": 0, "percentage": 0},
+            "external_model_accuracy": {"matches": 0, "total": 0, "percentage": 0},
+            "integration_accuracy": {"matches": 0, "total": 0, "percentage": 0},
+            "model_agreement": {"matches": 0, "total": 0, "percentage": 0}
+        }
+
+    # Counters for each metric
+    masterworks_matches = 0
+    external_matches = 0
+    integration_matches = 0
+    total_decisions = len(results)
+
+    # Calculate metrics comparing with manual decisions
+    for item, decision in results:
+        manual_code = decision.final_code
+
+        # Metric 1: MasterWorks accuracy (model_code vs manual)
+        if item.model_code and item.model_code == manual_code:
+            masterworks_matches += 1
+
+        # Metric 2: External Model accuracy (existing_code vs manual)
+        if item.existing_code and item.existing_code == manual_code:
+            external_matches += 1
+
+        # Metric 3: Integration accuracy (all three agree)
+        if (item.existing_code and item.model_code and
+            item.existing_code == item.model_code == manual_code):
+            integration_matches += 1
+
+    # Metric 4: Model Agreement (existing_code vs model_code) - check all items, not just decided ones
+    all_items = session.exec(select(Item)).all()
+    model_agreement_matches = 0
+    model_agreement_total = 0
+
+    for item in all_items:
+        if item.existing_code and item.model_code:
+            model_agreement_total += 1
+            if item.existing_code == item.model_code:
+                model_agreement_matches += 1
+
+    return {
+        "masterworks_accuracy": {
+            "matches": masterworks_matches,
+            "total": total_decisions,
+            "percentage": round(masterworks_matches / total_decisions * 100, 2) if total_decisions > 0 else 0
+        },
+        "external_model_accuracy": {
+            "matches": external_matches,
+            "total": total_decisions,
+            "percentage": round(external_matches / total_decisions * 100, 2) if total_decisions > 0 else 0
+        },
+        "integration_accuracy": {
+            "matches": integration_matches,
+            "total": total_decisions,
+            "percentage": round(integration_matches / total_decisions * 100, 2) if total_decisions > 0 else 0
+        },
+        "model_agreement": {
+            "matches": model_agreement_matches,
+            "total": model_agreement_total,
+            "percentage": round(model_agreement_matches / model_agreement_total * 100, 2) if model_agreement_total > 0 else 0
+        }
+    }
