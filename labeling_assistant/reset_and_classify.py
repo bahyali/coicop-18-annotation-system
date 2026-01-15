@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 
 # Configuration
-DATASET_PATH = Path("../backend/dataset.csv")
+DATASET_PATH = Path("../backend/dataset-mist8b.csv")
 COICOP_PATH = Path("../backend/raw_coicop.json")
 PROMPT_PATH = Path("prompt_c.txt")
 LOG_PATH = Path("classification_debug.log")

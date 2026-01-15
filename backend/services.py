@@ -49,7 +49,7 @@ def load_coicop_data(session: Session, file_path: str = "raw_coicop.json"):
     except Exception as e:
         print(f"Error loading COICOP data: {e}")
 
-def load_initial_data(session: Session, file_path: str = "dataset.csv"):
+def load_initial_data(session: Session, file_path: str = "dataset-mist8b.csv"):
     try:
         # Check if DB is empty
         statement = select(Item).limit(1)
