@@ -354,7 +354,7 @@
     </div>
 
     <script>
-        const API_URL = `http://${window.location.hostname}:8000/api`;
+        const API_URL = `http://${window.location.hostname}:8001/api`;
 
         const STAT_CONFIGS = [
             { key: 'total_items', title: 'إجمالي البيانات', icon: 'database', color: '#3b82f6', valueKey: 'total_items', subtitle: 'إجمالي العناصر' },
@@ -364,7 +364,7 @@
             { key: 'avg_time', title: 'متوسط الوقت', icon: 'zap', color: '#ec4899', valueFn: (s) => `${s.avg_time_seconds.toFixed(1)}ث`, subtitle: 'لكل عنصر' },
             { key: 'days_active', title: 'أيام النشاط', icon: 'calendar', color: '#06b6d4', valueKey: 'days_active', subtitleFn: (s) => `${s.hours_active.toFixed(1)} ساعة إجمالي` },
             { key: 'estimated', title: 'الوقت المتوقع', icon: 'trending-up', color: '#84cc16', valueFn: (s) => `${s.estimated_days_to_complete.toFixed(1)}`, subtitle: 'يوم للانتهاء' },
-            { key: 'total_decisions', title: 'إجمالي القرارات', icon: 'activity', color: '#f43f5e', valueKey: 'total_decisions', subtitle: 'قرار محقق' }
+            { key: 'total_decisions', title: 'إجمالي التحقق اليدوي', icon: 'activity', color: '#f43f5e', valueKey: 'total_decisions', subtitle: 'Accept + Fix + Escalate' }
         ];
 
         async function fetchData() {
